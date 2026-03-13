@@ -1,0 +1,114 @@
+# Configuration V2 — Test complet : Zones PID + Pacemakers + Consolidation + Entraînement
+
+[domain]
+topology = "knn_3d"
+size = 50000
+k_neighbors = 10
+domain_extent = 200.0
+seed = 42
+
+[node_defaults]
+activation = 0.0
+threshold = 0.2
+fatigue = 0.0
+memory_trace = 0.0
+excitability = 1.0
+inhibition = 0.0
+
+[edge_defaults]
+conductance = 1.0
+plasticity = 1.0
+decay = 0.01
+conductance_min = 0.1
+conductance_max = 5.0
+
+[propagation]
+kernel = "exponential"
+spatial_decay = 0.15
+gain = 0.6
+
+[plasticity]
+reinforcement_rate = 0.01
+weakening_rate = 0.002
+coactivation_threshold = 0.2
+coactivity_decay = 0.05
+
+[dissipation]
+activation_decay = 0.25
+fatigue_gain = 0.20
+fatigue_recovery = 0.05
+inhibition_gain = 0.12
+inhibition_decay = 0.03
+trace_decay = 0.005
+trace_gain = 0.1
+activation_min = 0.01
+decay_jitter = 0.15
+
+[simulation]
+total_ticks = 0
+snapshot_interval = 10
+seed = 42
+
+# V2 : Zones PID
+[zones]
+enabled = true
+num_zones = 12
+partition_method = "voronoi"
+target_activity = 0.25
+kp = 0.4
+ki = 0.03
+kd = 0.08
+pid_output_max = 1.5
+pid_integral_max = 4.0
+
+# V2 : Consolidation
+[consolidation]
+enabled = true
+threshold = 2.0
+ticks_required = 40
+
+# V2 : Pacemakers
+[[pacemakers]]
+node = 500
+amplitude = 0.3
+frequency = 0.02
+phase = 0.0
+offset = 0.4
+
+[[pacemakers]]
+node = 5000
+amplitude = 0.25
+frequency = 0.025
+phase = 1.57
+offset = 0.4
+
+# Phase 1 : Sonde baseline (tick 10-20)
+[[stimuli]]
+node = 2000
+start_tick = 10
+end_tick = 20
+intensity = 1.0
+repeat_interval = 0
+
+# Phase 2 : Entraînement répété (tick 200-600, toutes les 20 ticks)
+[[stimuli]]
+node = 2000
+start_tick = 200
+end_tick = 600
+intensity = 1.2
+repeat_interval = 20
+
+[[stimuli]]
+node = 4000
+start_tick = 200
+end_tick = 600
+intensity = 1.2
+repeat_interval = 20
+
+# Phase 3 : Sonde post-entraînement (tick 1500-1510)
+[[stimuli]]
+node = 2000
+start_tick = 1500
+end_tick = 1510
+intensity = 1.0
+repeat_interval = 0

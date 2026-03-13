@@ -70,7 +70,8 @@ fn main() {
                 "to": e.to,
                 "conductance": e.conductance,
                 "usage_count": e.usage_count,
-                "coactivity_trace": e.coactivity_trace
+                "coactivity_trace": e.coactivity_trace,
+                "consolidated": e.consolidated
             })
         })
         .collect();

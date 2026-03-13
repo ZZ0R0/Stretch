@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-/// Configuration complète du système V0.
+/// Configuration complète du système V2.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SimConfig {
     pub domain: DomainConfig,
@@ -12,6 +12,15 @@ pub struct SimConfig {
     pub simulation: SimulationParams,
     #[serde(default)]
     pub stimuli: Vec<StimulusConfig>,
+    /// V2 : configuration des zones et neurones de contrôle
+    #[serde(default)]
+    pub zones: ZoneConfig,
+    /// V2 : configuration de la consolidation mémoire
+    #[serde(default)]
+    pub consolidation: ConsolidationConfig,
+    /// V2 : liste des pacemakers
+    #[serde(default)]
+    pub pacemakers: Vec<PacemakerConfig>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -126,6 +135,111 @@ pub struct StimulusConfig {
     pub repeat_interval: usize,
 }
 
+/// V2 : Configuration des zones de contrôle
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ZoneConfig {
+    /// Activer le système de zones (false = mode V1 rétro-compatible)
+    #[serde(default)]
+    pub enabled: bool,
+    /// Nombre de zones (neurones de contrôle)
+    #[serde(default = "default_num_zones")]
+    pub num_zones: usize,
+    /// Méthode de partitionnement : "voronoi", "kmeans"
+    #[serde(default = "default_partition_method")]
+    pub partition_method: String,
+    /// Consigne d'activité cible pour les NC
+    #[serde(default = "default_target_activity")]
+    pub target_activity: f64,
+    /// Gain proportionnel du PID
+    #[serde(default = "default_kp")]
+    pub kp: f64,
+    /// Gain intégral du PID
+    #[serde(default = "default_ki")]
+    pub ki: f64,
+    /// Gain dérivé du PID
+    #[serde(default = "default_kd")]
+    pub kd: f64,
+    /// Borne maximale de la sortie PID (anti-windup)
+    #[serde(default = "default_pid_output_max")]
+    pub pid_output_max: f64,
+    /// Borne intégrale (anti-windup)
+    #[serde(default = "default_pid_integral_max")]
+    pub pid_integral_max: f64,
+}
+
+impl Default for ZoneConfig {
+    fn default() -> Self {
+        ZoneConfig {
+            enabled: false,
+            num_zones: 8,
+            partition_method: "voronoi".into(),
+            target_activity: 0.3,
+            kp: 0.5,
+            ki: 0.05,
+            kd: 0.1,
+            pid_output_max: 2.0,
+            pid_integral_max: 5.0,
+        }
+    }
+}
+
+/// V2 : Configuration de consolidation mémoire
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConsolidationConfig {
+    /// Activer la consolidation
+    #[serde(default)]
+    pub enabled: bool,
+    /// Seuil de conductance pour démarrer la consolidation
+    #[serde(default = "default_consolidation_threshold")]
+    pub threshold: f64,
+    /// Nombre de ticks au-dessus du seuil pour consolider
+    #[serde(default = "default_consolidation_ticks")]
+    pub ticks_required: usize,
+}
+
+impl Default for ConsolidationConfig {
+    fn default() -> Self {
+        ConsolidationConfig {
+            enabled: false,
+            threshold: 2.5,
+            ticks_required: 50,
+        }
+    }
+}
+
+/// V2 : Configuration d'un nœud pacemaker
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PacemakerConfig {
+    /// Nœud cible (index)
+    pub node: usize,
+    /// Amplitude de l'oscillation
+    #[serde(default = "default_pacemaker_amplitude")]
+    pub amplitude: f64,
+    /// Fréquence (cycles par tick)
+    #[serde(default = "default_pacemaker_frequency")]
+    pub frequency: f64,
+    /// Phase initiale (radians)
+    #[serde(default)]
+    pub phase: f64,
+    /// Offset DC (activation de base)
+    #[serde(default = "default_pacemaker_offset")]
+    pub offset: f64,
+}
+
+fn default_num_zones() -> usize { 8 }
+fn default_partition_method() -> String { "voronoi".into() }
+fn default_target_activity() -> f64 { 0.3 }
+fn default_kp() -> f64 { 0.5 }
+fn default_ki() -> f64 { 0.05 }
+fn default_kd() -> f64 { 0.1 }
+fn default_pid_output_max() -> f64 { 2.0 }
+fn default_pid_integral_max() -> f64 { 5.0 }
+fn default_consolidation_threshold() -> f64 { 2.5 }
+fn default_consolidation_ticks() -> usize { 50 }
+fn default_pacemaker_amplitude() -> f64 { 0.3 }
+fn default_pacemaker_frequency() -> f64 { 0.02 }
+fn default_pacemaker_offset() -> f64 { 0.5 }
+
 fn default_avg_neighbors() -> usize {
     6
 }
@@ -207,6 +321,9 @@ impl Default for SimConfig {
                 intensity: 1.0,
                 repeat_interval: 0,
             }],
+            zones: ZoneConfig::default(),
+            consolidation: ConsolidationConfig::default(),
+            pacemakers: Vec::new(),
         }
     }
 }

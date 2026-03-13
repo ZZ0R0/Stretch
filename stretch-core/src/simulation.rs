@@ -4,9 +4,11 @@ use rand_chacha::ChaCha8Rng;
 use crate::config::SimConfig;
 use crate::domain::Domain;
 use crate::metrics::{MetricsLog, TickMetrics};
+use crate::pacemaker;
 use crate::plasticity;
 use crate::propagation;
 use crate::stimulus;
+use crate::zone::ZoneManager;
 
 // ---------------------------------------------------------------------------
 // Observer trait — hooks / callbacks pour connecter la visualisation
@@ -44,6 +46,8 @@ pub struct Simulation {
     pub tick: usize,
     pub finished: bool,
     rng: ChaCha8Rng,
+    /// V2 : gestionnaire de zones
+    pub zone_manager: ZoneManager,
 }
 
 /// Résultat complet d'une simulation terminée.
@@ -60,6 +64,7 @@ impl Simulation {
             &config.node_defaults,
             &config.edge_defaults,
         );
+        let zone_manager = ZoneManager::from_config(&config.zones, &domain);
         let rng = ChaCha8Rng::seed_from_u64(config.simulation.seed);
         Simulation {
             domain,
@@ -68,6 +73,7 @@ impl Simulation {
             tick: 0,
             finished: false,
             rng,
+            zone_manager,
         }
     }
 
@@ -77,19 +83,35 @@ impl Simulation {
     }
 
     /// Exécuter **un seul tick** de la simulation.
-    /// Retourne le TickMetrics du tick courant.
+    /// V2 : séquence en 6 phases — mesure → régulation → stimulus → pacemaker → propagation → dissipation → plasticité
     pub fn step(&mut self) -> TickMetrics {
         let tick = self.tick;
         let config = &self.config;
 
-        // Étape 1 : Injection de stimuli
+        // === Phase 0 : Mesure de l'activité des zones ===
+        if config.zones.enabled {
+            self.zone_manager.measure(&self.domain);
+        }
+
+        // === Phase 1 : Régulation PID ===
+        if config.zones.enabled {
+            let zones_config = config.zones.clone();
+            self.zone_manager.regulate(&mut self.domain, &zones_config);
+        }
+
+        // === Phase 2 : Injection de stimuli externes ===
         stimulus::inject_stimuli(&mut self.domain, &config.stimuli, tick);
 
-        // Étape 2 : Propagation
+        // === Phase 2b : Pacemakers ===
+        if !config.pacemakers.is_empty() {
+            pacemaker::apply_pacemakers(&mut self.domain, &config.pacemakers, tick);
+        }
+
+        // === Phase 3 : Propagation ===
         let influences = propagation::compute_influences(&self.domain, &config.propagation);
         let _newly_activated = propagation::apply_influences(&mut self.domain, &influences);
 
-        // Étape 3 : Dissipation (avec jitter aléatoire sur le decay)
+        // === Phase 4 : Dissipation (avec jitter aléatoire sur le decay) ===
         let base_decay = config.dissipation.activation_decay;
         let jitter = config.dissipation.decay_jitter;
         let activation_min = config.dissipation.activation_min;
@@ -108,15 +130,15 @@ impl Simulation {
             node.decay_activation(effective_decay, activation_min);
         }
 
-        // Étape 4 : Plasticité
-        plasticity::update_plasticity(&mut self.domain, &config.plasticity);
+        // === Phase 5 : Plasticité + consolidation ===
+        plasticity::update_plasticity(&mut self.domain, &config.plasticity, &config.consolidation);
 
-        // Étape 5 : Métriques
-        self.metrics.record(tick, &self.domain);
+        // === Phase 6 : Métriques ===
+        self.metrics.record(tick, &self.domain, &self.zone_manager);
         let tick_metrics = self.metrics.snapshots.last().unwrap().clone();
 
         self.tick += 1;
-        if self.tick >= config.simulation.total_ticks {
+        if config.simulation.total_ticks > 0 && self.tick >= config.simulation.total_ticks {
             self.finished = true;
         }
 
@@ -142,12 +164,14 @@ pub fn run_with_observer(config: &SimConfig, observer: &mut dyn SimulationObserv
 
     observer.on_init(&sim.domain, config);
 
+    let ticks_label = if sim.total_ticks() == 0 { "∞".to_string() } else { sim.total_ticks().to_string() };
     println!(
-        "=== Simulation V1 ===\nTopologie: {} | Nœuds: {}, Liaisons: {}, Ticks: {}",
+        "=== Simulation V2 ===\nTopologie: {} | Nœuds: {}, Liaisons: {}, Ticks: {} | Zones: {}",
         config.domain.topology,
         sim.domain.num_nodes(),
         sim.domain.num_edges(),
-        sim.total_ticks()
+        ticks_label,
+        sim.zone_manager.num_zones()
     );
 
     while !sim.finished {

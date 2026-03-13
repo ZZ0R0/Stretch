@@ -97,7 +97,7 @@ impl VizState {
 // ---------------------------------------------------------------------------
 fn window_conf() -> Conf {
     Conf {
-        window_title: "Stretch V1 — Visualisation 3D".to_string(),
+        window_title: "Stretch V2 — Visualisation 3D".to_string(),
         window_width: 1280,
         window_height: 900,
         window_resizable: true,
@@ -218,10 +218,15 @@ fn draw_top_bar(viz: &VizState) {
     };
 
     let topo = &viz.sim.config.domain.topology;
+    let total = viz.sim.total_ticks();
+    let tick_str = if total == 0 {
+        format!("{}", viz.sim.tick)
+    } else {
+        format!("{}/{}", viz.sim.tick, total)
+    };
     let text = format!(
-        "Tick: {}/{} | {} | {}x | {} | {} [1-4]",
-        viz.sim.tick,
-        viz.sim.total_ticks(),
+        "Tick: {} | {} | {}x | {} | {} [1-4]",
+        tick_str,
         status,
         viz.ticks_per_frame,
         topo,
@@ -490,6 +495,24 @@ fn draw_sidebar(viz: &VizState) {
     y += line_h * 0.5;
     draw_label(&mut y, "Cond. moyenne:", &format!("{:.3}", mean_cond));
     draw_label(&mut y, "Cond. max:", &format!("{:.3}", max_cond));
+
+    // V2 : métriques zones et consolidation
+    let consolidated = edges.iter().filter(|e| e.consolidated).count();
+    if consolidated > 0 {
+        y += line_h * 0.5;
+        draw_label(&mut y, "Consolidées:", &format!("{}", consolidated));
+    }
+
+    let zm = &viz.sim.zone_manager;
+    if zm.num_zones() > 0 {
+        y += line_h * 0.5;
+        draw_text("--- ZONES PID ---", x, y, 16.0, YELLOW);
+        y += line_h * 1.2;
+        draw_label(&mut y, "Zones:", &format!("{}", zm.num_zones()));
+        draw_label(&mut y, "Act. moy.:", &format!("{:.4}", zm.global_activity_mean()));
+        draw_label(&mut y, "Err. PID:", &format!("{:.4}", zm.mean_pid_error()));
+        draw_label(&mut y, "Out. PID:", &format!("{:.4}", zm.mean_pid_output()));
+    }
 
     y += line_h * 1.5;
     draw_text("--- CONTRÔLES ---", x, y, 16.0, YELLOW);

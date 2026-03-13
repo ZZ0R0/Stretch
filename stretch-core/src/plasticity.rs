@@ -1,8 +1,8 @@
-use crate::config::PlasticityConfig;
+use crate::config::{ConsolidationConfig, PlasticityConfig};
 use crate::domain::Domain;
 
 /// Mettre à jour les traces de co-activation et les conductances.
-pub fn update_plasticity(domain: &mut Domain, config: &PlasticityConfig) {
+pub fn update_plasticity(domain: &mut Domain, config: &PlasticityConfig, consolidation: &ConsolidationConfig) {
     // Phase 1 : collecter les activations pour éviter les problèmes de borrow
     let activations: Vec<f64> = domain.nodes.iter().map(|n| n.activation).collect();
 
@@ -25,5 +25,10 @@ pub fn update_plasticity(domain: &mut Domain, config: &PlasticityConfig) {
             config.weakening_rate,
             config.coactivation_threshold,
         );
+
+        // V2 : consolidation mémoire
+        if consolidation.enabled {
+            edge.update_consolidation(consolidation.threshold, consolidation.ticks_required);
+        }
     }
 }

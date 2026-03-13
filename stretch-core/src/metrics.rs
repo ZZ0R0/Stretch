@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use crate::domain::Domain;
+use crate::zone::ZoneManager;
 
 /// Snapshot des métriques à un instant donné.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -15,6 +16,16 @@ pub struct TickMetrics {
     pub mean_memory_trace: f64,
     pub max_memory_trace: f64,
     pub mean_fatigue: f64,
+    /// V2 : nombre d'arêtes consolidées
+    pub consolidated_edges: usize,
+    /// V2 : nombre de zones actives
+    pub num_zones: usize,
+    /// V2 : erreur PID moyenne (absolue)
+    pub mean_pid_error: f64,
+    /// V2 : sortie PID moyenne
+    pub mean_pid_output: f64,
+    /// V2 : activité moyenne des zones
+    pub zone_activity_mean: f64,
 }
 
 /// Collecte complète des métriques sur la simulation.
@@ -30,7 +41,7 @@ impl MetricsLog {
         }
     }
 
-    pub fn record(&mut self, tick: usize, domain: &Domain) {
+    pub fn record(&mut self, tick: usize, domain: &Domain, zone_mgr: &ZoneManager) {
         let active_nodes = domain.nodes.iter().filter(|n| n.is_active()).count();
         let global_energy: f64 = domain.nodes.iter().map(|n| n.activation).sum();
         let max_activation = domain
@@ -57,6 +68,8 @@ impl MetricsLog {
             .fold(0.0_f64, f64::max);
         let mean_fatigue: f64 = domain.nodes.iter().map(|n| n.fatigue).sum::<f64>() / n_nodes;
 
+        let consolidated_edges = domain.edges.iter().filter(|e| e.consolidated).count();
+
         self.snapshots.push(TickMetrics {
             tick,
             active_nodes,
@@ -67,6 +80,11 @@ impl MetricsLog {
             mean_memory_trace,
             max_memory_trace,
             mean_fatigue,
+            consolidated_edges,
+            num_zones: zone_mgr.num_zones(),
+            mean_pid_error: zone_mgr.mean_pid_error(),
+            mean_pid_output: zone_mgr.mean_pid_output(),
+            zone_activity_mean: zone_mgr.global_activity_mean(),
         });
     }
 
