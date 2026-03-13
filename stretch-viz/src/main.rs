@@ -11,7 +11,7 @@ const TOP_BAR_H: f32 = 40.0;
 const PANEL_GAP: f32 = 8.0;
 
 // ---------------------------------------------------------------------------
-// Mapping couleur : valeur [0,1] → palette chaleur (noir → bleu → cyan → vert → jaune → rouge → blanc)
+// Mapping couleur : valeur [0,1] → palette chaleur
 // ---------------------------------------------------------------------------
 fn heat_color(t: f32) -> Color {
     let t = t.clamp(0.0, 1.0);
@@ -34,6 +34,24 @@ fn heat_color(t: f32) -> Color {
 }
 
 // ---------------------------------------------------------------------------
+// Projection isométrique 3D → 2D
+// ---------------------------------------------------------------------------
+fn project_3d(pos: &[f64; 3], angle_y: f32, angle_x: f32) -> (f32, f32) {
+    let (x, y, z) = (pos[0] as f32, pos[1] as f32, pos[2] as f32);
+    // Rotation autour de Y (horizontal)
+    let cos_y = angle_y.cos();
+    let sin_y = angle_y.sin();
+    let xr = x * cos_y + z * sin_y;
+    let zr = -x * sin_y + z * cos_y;
+    // Rotation autour de X (vertical)
+    let cos_x = angle_x.cos();
+    let sin_x = angle_x.sin();
+    let yr = y * cos_x - zr * sin_x;
+    // Orthographic projection: (xr, yr)
+    (xr, yr)
+}
+
+// ---------------------------------------------------------------------------
 // État de la visualisation
 // ---------------------------------------------------------------------------
 enum ViewMode {
@@ -48,20 +66,28 @@ struct VizState {
     paused: bool,
     ticks_per_frame: usize,
     view_mode: ViewMode,
+    is_grid: bool,
     grid_side: usize,
     finished: bool,
+    // 3D rotation
+    angle_y: f32,
+    angle_x: f32,
 }
 
 impl VizState {
     fn new(config: SimConfig) -> Self {
-        let grid_side = config.domain.size;
+        let is_grid = config.domain.topology == "grid2d";
+        let grid_side = if is_grid { config.domain.size } else { 0 };
         VizState {
             sim: Simulation::new(config),
             paused: true,
             ticks_per_frame: 1,
             view_mode: ViewMode::Activation,
+            is_grid,
             grid_side,
             finished: false,
+            angle_y: 0.6,
+            angle_x: 0.4,
         }
     }
 }
@@ -71,9 +97,9 @@ impl VizState {
 // ---------------------------------------------------------------------------
 fn window_conf() -> Conf {
     Conf {
-        window_title: "Stretch V0 — Visualisation".to_string(),
-        window_width: 1024,
-        window_height: 768,
+        window_title: "Stretch V1 — Visualisation 3D".to_string(),
+        window_width: 1280,
+        window_height: 900,
         window_resizable: true,
         ..Default::default()
     }
@@ -81,7 +107,6 @@ fn window_conf() -> Conf {
 
 #[macroquad::main(window_conf)]
 async fn main() {
-    // Charger la config
     let args: Vec<String> = std::env::args().collect();
     let config = if args.len() > 1 {
         let content = std::fs::read_to_string(&args[1])
@@ -102,7 +127,6 @@ async fn main() {
             viz.paused = !viz.paused;
         }
         if is_key_pressed(KeyCode::Right) || is_key_pressed(KeyCode::N) {
-            // Avancer d'un tick (même en pause)
             if !viz.finished {
                 viz.sim.step();
                 if viz.sim.finished {
@@ -129,12 +153,24 @@ async fn main() {
             viz.ticks_per_frame = (viz.ticks_per_frame / 2).max(1);
         }
         if is_key_pressed(KeyCode::R) {
-            // Reset
             let config = viz.sim.config.clone();
             viz = VizState::new(config);
         }
         if is_key_pressed(KeyCode::Escape) || is_key_pressed(KeyCode::Q) {
             break;
+        }
+        // Rotation 3D
+        if is_key_down(KeyCode::A) {
+            viz.angle_y -= 0.03;
+        }
+        if is_key_down(KeyCode::D) {
+            viz.angle_y += 0.03;
+        }
+        if is_key_down(KeyCode::W) {
+            viz.angle_x -= 0.03;
+        }
+        if is_key_down(KeyCode::S) {
+            viz.angle_x += 0.03;
         }
 
         // --- Avancer la simulation ---
@@ -151,7 +187,11 @@ async fn main() {
         // --- Rendu ---
         clear_background(Color::new(0.12, 0.12, 0.15, 1.0));
         draw_top_bar(&viz);
-        draw_grid(&viz);
+        if viz.is_grid {
+            draw_grid(&viz);
+        } else {
+            draw_points_3d(&viz);
+        }
         draw_sidebar(&viz);
 
         next_frame().await;
@@ -177,12 +217,14 @@ fn draw_top_bar(viz: &VizState) {
         ViewMode::Conductance => "Conductance",
     };
 
+    let topo = &viz.sim.config.domain.topology;
     let text = format!(
-        "Tick: {}/{} | {} | Vitesse: {}x | Vue: {} [1-4]",
+        "Tick: {}/{} | {} | {}x | {} | {} [1-4]",
         viz.sim.tick,
         viz.sim.total_ticks(),
         status,
         viz.ticks_per_frame,
+        topo,
         mode_name
     );
     draw_text(&text, 10.0, 25.0, 20.0, WHITE);
@@ -280,6 +322,128 @@ fn draw_grid(viz: &VizState) {
 }
 
 // ---------------------------------------------------------------------------
+// Rendu 3D : nuage de points avec projection orthographique + rotation
+// ---------------------------------------------------------------------------
+fn draw_points_3d(viz: &VizState) {
+    let sw = screen_width();
+    let sh = screen_height();
+
+    let area_w = sw - SIDEBAR_W - PANEL_GAP * 2.0;
+    let area_h = sh - TOP_BAR_H - PANEL_GAP * 2.0;
+
+    // Calculer les valeurs par nœud
+    let (values, label_max): (Vec<f64>, &str) = match viz.view_mode {
+        ViewMode::Activation => {
+            (viz.sim.domain.nodes.iter().map(|n| n.activation).collect(), "act")
+        }
+        ViewMode::MemoryTrace => {
+            (viz.sim.domain.nodes.iter().map(|n| n.memory_trace).collect(), "trace")
+        }
+        ViewMode::Fatigue => {
+            (viz.sim.domain.nodes.iter().map(|n| n.fatigue).collect(), "fatigue")
+        }
+        ViewMode::Conductance => {
+            let mut cond_by_node = vec![0.0_f64; viz.sim.domain.nodes.len()];
+            let mut count_by_node = vec![0_usize; viz.sim.domain.nodes.len()];
+            for edge in &viz.sim.domain.edges {
+                cond_by_node[edge.from] += edge.conductance;
+                count_by_node[edge.from] += 1;
+            }
+            for i in 0..cond_by_node.len() {
+                if count_by_node[i] > 0 {
+                    cond_by_node[i] /= count_by_node[i] as f64;
+                }
+            }
+            (cond_by_node, "cond")
+        }
+    };
+
+    let max_val = values.iter().cloned().fold(0.001_f64, f64::max);
+
+    // Project all 3D positions to 2D
+    let positions = &viz.sim.domain.positions;
+    if positions.is_empty() {
+        return;
+    }
+
+    // Compute bounding box of projected points for fitting
+    let projected: Vec<(f32, f32)> = positions
+        .iter()
+        .map(|p| project_3d(p, viz.angle_y, viz.angle_x))
+        .collect();
+
+    let mut min_x = f32::MAX;
+    let mut max_x = f32::MIN;
+    let mut min_y = f32::MAX;
+    let mut max_y = f32::MIN;
+    for &(px, py) in &projected {
+        min_x = min_x.min(px);
+        max_x = max_x.max(px);
+        min_y = min_y.min(py);
+        max_y = max_y.max(py);
+    }
+    let range_x = (max_x - min_x).max(1.0);
+    let range_y = (max_y - min_y).max(1.0);
+
+    let margin = 20.0;
+    let usable_w = area_w - margin * 2.0;
+    let usable_h = area_h - margin * 2.0;
+    let scale = (usable_w / range_x).min(usable_h / range_y);
+
+    let ox = PANEL_GAP + margin + (usable_w - range_x * scale) * 0.5;
+    let oy = TOP_BAR_H + PANEL_GAP + margin + (usable_h - range_y * scale) * 0.5;
+
+    // Choose point radius based on number of nodes
+    let n = positions.len();
+    let point_r = if n < 500 { 4.0 } else if n < 5000 { 2.5 } else { 1.5 };
+
+    for (i, &(px, py)) in projected.iter().enumerate() {
+        let sx = ox + (px - min_x) * scale;
+        let sy = oy + (py - min_y) * scale;
+        let normalized = (values[i] / max_val) as f32;
+        let color = if normalized < 0.01 {
+            Color::new(0.15, 0.15, 0.18, 1.0) // faint for inactive
+        } else {
+            heat_color(normalized)
+        };
+        draw_circle(sx, sy, point_r, color);
+    }
+
+    // Légende
+    let legend_y = TOP_BAR_H + PANEL_GAP + area_h - 25.0;
+    draw_text(
+        &format!("{}: 0", label_max),
+        PANEL_GAP + 10.0,
+        legend_y + 15.0,
+        16.0,
+        GRAY,
+    );
+    let bar_x = PANEL_GAP + 90.0;
+    let bar_w = 200.0;
+    for px in 0..bar_w as u32 {
+        let t = px as f32 / bar_w;
+        let c = heat_color(t);
+        draw_line(bar_x + px as f32, legend_y + 3.0, bar_x + px as f32, legend_y + 13.0, 1.0, c);
+    }
+    draw_text(
+        &format!("{:.2}", max_val),
+        bar_x + bar_w + 5.0,
+        legend_y + 15.0,
+        16.0,
+        GRAY,
+    );
+
+    // 3D rotation hint
+    draw_text(
+        "Rotation: W/A/S/D",
+        PANEL_GAP + 10.0,
+        legend_y - 5.0,
+        14.0,
+        DARKGRAY,
+    );
+}
+
+// ---------------------------------------------------------------------------
 // Sidebar : métriques en temps réel
 // ---------------------------------------------------------------------------
 fn draw_sidebar(viz: &VizState) {
@@ -336,6 +500,7 @@ fn draw_sidebar(viz: &VizState) {
         ("→ ou N", "1 tick (pas à pas)"),
         ("↑ / ↓", "Vitesse ×2 / ÷2"),
         ("1-2-3-4", "Vue: Act/Trace/Fat/Cond"),
+        ("W/A/S/D", "Rotation 3D"),
         ("R", "Reset simulation"),
         ("Q / ESC", "Quitter"),
     ];

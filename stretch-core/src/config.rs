@@ -16,13 +16,22 @@ pub struct SimConfig {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DomainConfig {
-    /// Type de topologie : "grid2d", "random_sparse"
+    /// Type de topologie : "grid2d", "random_sparse", "knn_3d", "radius_3d"
     pub topology: String,
-    /// Nombre de nœuds (côté pour grid2d, total pour random)
+    /// Nombre de nœuds (côté pour grid2d, total pour les autres)
     pub size: usize,
     /// Nombre moyen de voisins (pour random_sparse)
     #[serde(default = "default_avg_neighbors")]
     pub avg_neighbors: usize,
+    /// Nombre de plus proches voisins (pour knn_3d)
+    #[serde(default = "default_k_neighbors")]
+    pub k_neighbors: usize,
+    /// Rayon de connexion (pour radius_3d)
+    #[serde(default = "default_radius")]
+    pub radius: f64,
+    /// Taille du domaine spatial 3D (cube de côté domain_extent)
+    #[serde(default = "default_domain_extent")]
+    pub domain_extent: f64,
     /// Graine aléatoire pour la génération du graphe
     pub seed: u64,
 }
@@ -84,6 +93,12 @@ pub struct DissipationConfig {
     pub trace_decay: f64,
     /// Gain de trace mémoire par activation
     pub trace_gain: f64,
+    /// Activation minimale (potentiel de repos) — empêche le flatline à 0
+    #[serde(default = "default_activation_min")]
+    pub activation_min: f64,
+    /// Jitter aléatoire sur le taux de decay (fraction, ex: 0.15 = ±15%)
+    #[serde(default)]
+    pub decay_jitter: f64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -115,6 +130,22 @@ fn default_avg_neighbors() -> usize {
     6
 }
 
+fn default_k_neighbors() -> usize {
+    12
+}
+
+fn default_radius() -> f64 {
+    10.0
+}
+
+fn default_domain_extent() -> f64 {
+    100.0
+}
+
+fn default_activation_min() -> f64 {
+    0.01
+}
+
 impl Default for SimConfig {
     fn default() -> Self {
         SimConfig {
@@ -122,6 +153,9 @@ impl Default for SimConfig {
                 topology: "grid2d".into(),
                 size: 20,
                 avg_neighbors: 6,
+                k_neighbors: 12,
+                radius: 10.0,
+                domain_extent: 100.0,
                 seed: 42,
             },
             node_defaults: NodeDefaults {
@@ -158,6 +192,8 @@ impl Default for SimConfig {
                 inhibition_decay: 0.03,
                 trace_decay: 0.005,
                 trace_gain: 0.1,
+                activation_min: 0.01,
+                decay_jitter: 0.15,
             },
             simulation: SimulationParams {
                 total_ticks: 500,

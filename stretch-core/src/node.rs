@@ -46,10 +46,12 @@ impl Node {
         self.activation > self.effective_threshold()
     }
 
-    /// Appliquer la dissipation de l'activation.
-    pub fn decay_activation(&mut self, rate: f64) {
+    /// Appliquer la dissipation de l'activation avec potentiel de repos.
+    /// `rate` : taux de decay (déjà jitté si applicable)
+    /// `min`  : activation minimale (potentiel de repos)
+    pub fn decay_activation(&mut self, rate: f64, min: f64) {
         self.activation *= 1.0 - rate;
-        self.activation = self.activation.max(0.0);
+        self.activation = self.activation.max(min);
     }
 
     /// Mettre à jour la fatigue.

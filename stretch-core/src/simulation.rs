@@ -1,3 +1,6 @@
+use rand::prelude::*;
+use rand_chacha::ChaCha8Rng;
+
 use crate::config::SimConfig;
 use crate::domain::Domain;
 use crate::metrics::{MetricsLog, TickMetrics};
@@ -40,6 +43,7 @@ pub struct Simulation {
     pub config: SimConfig,
     pub tick: usize,
     pub finished: bool,
+    rng: ChaCha8Rng,
 }
 
 /// Résultat complet d'une simulation terminée.
@@ -56,12 +60,14 @@ impl Simulation {
             &config.node_defaults,
             &config.edge_defaults,
         );
+        let rng = ChaCha8Rng::seed_from_u64(config.simulation.seed);
         Simulation {
             domain,
             metrics: MetricsLog::new(),
             config,
             tick: 0,
             finished: false,
+            rng,
         }
     }
 
@@ -83,13 +89,23 @@ impl Simulation {
         let influences = propagation::compute_influences(&self.domain, &config.propagation);
         let _newly_activated = propagation::apply_influences(&mut self.domain, &influences);
 
-        // Étape 3 : Dissipation
+        // Étape 3 : Dissipation (avec jitter aléatoire sur le decay)
+        let base_decay = config.dissipation.activation_decay;
+        let jitter = config.dissipation.decay_jitter;
+        let activation_min = config.dissipation.activation_min;
         for node in self.domain.nodes.iter_mut() {
             node.update_fatigue(config.dissipation.fatigue_gain, config.dissipation.fatigue_recovery);
             node.update_inhibition(config.dissipation.inhibition_gain, config.dissipation.inhibition_decay);
             node.update_trace(config.dissipation.trace_gain, config.dissipation.trace_decay);
             node.update_excitability_from_trace();
-            node.decay_activation(config.dissipation.activation_decay);
+            // Decay avec jitter : taux ± jitter% par nœud par tick
+            let effective_decay = if jitter > 0.0 {
+                let j: f64 = self.rng.gen_range(-jitter..jitter);
+                (base_decay * (1.0 + j)).clamp(0.0, 1.0)
+            } else {
+                base_decay
+            };
+            node.decay_activation(effective_decay, activation_min);
         }
 
         // Étape 4 : Plasticité
@@ -127,7 +143,8 @@ pub fn run_with_observer(config: &SimConfig, observer: &mut dyn SimulationObserv
     observer.on_init(&sim.domain, config);
 
     println!(
-        "=== Simulation V0 ===\nNœuds: {}, Liaisons: {}, Ticks: {}",
+        "=== Simulation V1 ===\nTopologie: {} | Nœuds: {}, Liaisons: {}, Ticks: {}",
+        config.domain.topology,
         sim.domain.num_nodes(),
         sim.domain.num_edges(),
         sim.total_ticks()
