@@ -1,0 +1,2802 @@
+[
+  {
+    "activation_count": 12,
+    "excitability": 1.0790378112580021,
+    "fatigue": 4.420483140645229e-9,
+    "id": 0,
+    "memory_trace": 0.7903781125800204
+  },
+  {
+    "activation_count": 15,
+    "excitability": 1.1199730516809456,
+    "fatigue": 5.6924102877676745e-9,
+    "id": 1,
+    "memory_trace": 1.1997305168094559
+  },
+  {
+    "activation_count": 17,
+    "excitability": 1.1342404685806862,
+    "fatigue": 5.407789773379291e-9,
+    "id": 2,
+    "memory_trace": 1.342404685806861
+  },
+  {
+    "activation_count": 16,
+    "excitability": 1.1211390573533815,
+    "fatigue": 4.404678569103515e-9,
+    "id": 3,
+    "memory_trace": 1.2113905735338153
+  },
+  {
+    "activation_count": 16,
+    "excitability": 1.124033518456029,
+    "fatigue": 3.975222408615922e-9,
+    "id": 4,
+    "memory_trace": 1.2403351845602897
+  },
+  {
+    "activation_count": 16,
+    "excitability": 1.124897914034526,
+    "fatigue": 3.5876382237758696e-9,
+    "id": 5,
+    "memory_trace": 1.2489791403452604
+  },
+  {
+    "activation_count": 17,
+    "excitability": 1.131996768732099,
+    "fatigue": 3.408256312587076e-9,
+    "id": 6,
+    "memory_trace": 1.3199676873209905
+  },
+  {
+    "activation_count": 17,
+    "excitability": 1.1348980142282383,
+    "fatigue": 3.237843496957722e-9,
+    "id": 7,
+    "memory_trace": 1.348980142282383
+  },
+  {
+    "activation_count": 17,
+    "excitability": 1.1330796745813227,
+    "fatigue": 3.075951322109836e-9,
+    "id": 8,
+    "memory_trace": 1.3307967458132286
+  },
+  {
+    "activation_count": 18,
+    "excitability": 1.1366013816819431,
+    "fatigue": 2.922153756004344e-9,
+    "id": 9,
+    "memory_trace": 1.3660138168194311
+  },
+  {
+    "activation_count": 17,
+    "excitability": 1.1275939843676983,
+    "fatigue": 2.7760460682041266e-9,
+    "id": 10,
+    "memory_trace": 1.2759398436769838
+  },
+  {
+    "activation_count": 18,
+    "excitability": 1.1366013816819431,
+    "fatigue": 2.922153756004344e-9,
+    "id": 11,
+    "memory_trace": 1.3660138168194311
+  },
+  {
+    "activation_count": 17,
+    "excitability": 1.1330796745813227,
+    "fatigue": 3.075951322109836e-9,
+    "id": 12,
+    "memory_trace": 1.3307967458132286
+  },
+  {
+    "activation_count": 17,
+    "excitability": 1.1348980142282383,
+    "fatigue": 3.237843496957722e-9,
+    "id": 13,
+    "memory_trace": 1.348980142282383
+  },
+  {
+    "activation_count": 17,
+    "excitability": 1.131996768732099,
+    "fatigue": 3.408256312587076e-9,
+    "id": 14,
+    "memory_trace": 1.31996768732099
+  },
+  {
+    "activation_count": 16,
+    "excitability": 1.124897914034526,
+    "fatigue": 3.5876382237758696e-9,
+    "id": 15,
+    "memory_trace": 1.2489791403452604
+  },
+  {
+    "activation_count": 16,
+    "excitability": 1.124033518415511,
+    "fatigue": 3.975222408615922e-9,
+    "id": 16,
+    "memory_trace": 1.2403351841551093
+  },
+  {
+    "activation_count": 16,
+    "excitability": 1.1211389914060361,
+    "fatigue": 4.404678569103515e-9,
+    "id": 17,
+    "memory_trace": 1.2113899140603603
+  },
+  {
+    "activation_count": 15,
+    "excitability": 1.1131519154568488,
+    "fatigue": 4.88053027047481e-9,
+    "id": 18,
+    "memory_trace": 1.1315191545684886
+  },
+  {
+    "activation_count": 11,
+    "excitability": 1.066829552633302,
+    "fatigue": 3.5543564425817547e-9,
+    "id": 19,
+    "memory_trace": 0.6682955263330206
+  },
+  {
+    "activation_count": 15,
+    "excitability": 1.1199730516809456,
+    "fatigue": 5.6924102877676745e-9,
+    "id": 20,
+    "memory_trace": 1.1997305168094559
+  },
+  {
+    "activation_count": 18,
+    "excitability": 1.158974734688138,
+    "fatigue": 5.407789773379291e-9,
+    "id": 21,
+    "memory_trace": 1.5897473468813814
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.17156548144722,
+    "fatigue": 5.137400284710326e-9,
+    "id": 22,
+    "memory_trace": 1.7156548144722001
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.1641914581020123,
+    "fatigue": 4.184444640648339e-9,
+    "id": 23,
+    "memory_trace": 1.6419145810201237
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1684708497094356,
+    "fatigue": 3.776461288185126e-9,
+    "id": 24,
+    "memory_trace": 1.6847084970943556
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.1595955129686468,
+    "fatigue": 3.408256312587076e-9,
+    "id": 25,
+    "memory_trace": 1.5959551296864674
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1671784336393178,
+    "fatigue": 3.237843496957722e-9,
+    "id": 26,
+    "memory_trace": 1.6717843363931775
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1696432808395802,
+    "fatigue": 3.075951322109836e-9,
+    "id": 27,
+    "memory_trace": 1.6964328083958031
+  },
+  {
+    "activation_count": 21,
+    "excitability": 1.1678558847375777,
+    "fatigue": 2.922153756004344e-9,
+    "id": 28,
+    "memory_trace": 1.6785588473757775
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.16260753843455,
+    "fatigue": 2.7760460682041266e-9,
+    "id": 29,
+    "memory_trace": 1.6260753843455003
+  },
+  {
+    "activation_count": 21,
+    "excitability": 1.1630635968167113,
+    "fatigue": 2.7760460682041266e-9,
+    "id": 30,
+    "memory_trace": 1.630635968167113
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.16260753843455,
+    "fatigue": 2.7760460682041266e-9,
+    "id": 31,
+    "memory_trace": 1.6260753843455003
+  },
+  {
+    "activation_count": 21,
+    "excitability": 1.1678558847375777,
+    "fatigue": 2.922153756004344e-9,
+    "id": 32,
+    "memory_trace": 1.6785588473757775
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1696432808395802,
+    "fatigue": 3.075951322109836e-9,
+    "id": 33,
+    "memory_trace": 1.6964328083958031
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1671784336393178,
+    "fatigue": 3.237843496957722e-9,
+    "id": 34,
+    "memory_trace": 1.6717843363931775
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.1595955129686468,
+    "fatigue": 3.408256312587076e-9,
+    "id": 35,
+    "memory_trace": 1.5959551296864674
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1684708497094356,
+    "fatigue": 3.776461288185126e-9,
+    "id": 36,
+    "memory_trace": 1.6847084970943556
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.1641914568806857,
+    "fatigue": 4.184444640648339e-9,
+    "id": 37,
+    "memory_trace": 1.6419145688068577
+  },
+  {
+    "activation_count": 18,
+    "excitability": 1.146097725262264,
+    "fatigue": 4.404678569103515e-9,
+    "id": 38,
+    "memory_trace": 1.4609772526226386
+  },
+  {
+    "activation_count": 15,
+    "excitability": 1.116994005281327,
+    "fatigue": 4.88053027047481e-9,
+    "id": 39,
+    "memory_trace": 1.1699400528132708
+  },
+  {
+    "activation_count": 17,
+    "excitability": 1.1342404685806862,
+    "fatigue": 5.407789773379291e-9,
+    "id": 40,
+    "memory_trace": 1.342404685806861
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.17156548144722,
+    "fatigue": 5.137400284710326e-9,
+    "id": 41,
+    "memory_trace": 1.7156548144722001
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.170169257483092,
+    "fatigue": 4.184444640648339e-9,
+    "id": 42,
+    "memory_trace": 1.7016925748309193
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1785497468093966,
+    "fatigue": 3.776461288185126e-9,
+    "id": 43,
+    "memory_trace": 1.785497468093966
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.172515070531758,
+    "fatigue": 3.237843496957722e-9,
+    "id": 44,
+    "memory_trace": 1.7251507053175785
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1658831010102229,
+    "fatigue": 2.922153756004344e-9,
+    "id": 45,
+    "memory_trace": 1.658831010102228
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.164426564735746,
+    "fatigue": 2.63724376479392e-9,
+    "id": 46,
+    "memory_trace": 1.6442656473574584
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.1584892730482759,
+    "fatigue": 2.3801124977265126e-9,
+    "id": 47,
+    "memory_trace": 1.5848927304827596
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1589340548610543,
+    "fatigue": 2.261106872840187e-9,
+    "id": 48,
+    "memory_trace": 1.589340548610542
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.155624775065379,
+    "fatigue": 2.1480515291981773e-9,
+    "id": 49,
+    "memory_trace": 1.5562477506537893
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1567057708242117,
+    "fatigue": 2.1480515291981773e-9,
+    "id": 50,
+    "memory_trace": 1.5670577082421175
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.155624775065379,
+    "fatigue": 2.1480515291981773e-9,
+    "id": 51,
+    "memory_trace": 1.5562477506537888
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1589340548610543,
+    "fatigue": 2.261106872840187e-9,
+    "id": 52,
+    "memory_trace": 1.589340548610542
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.1584892730482759,
+    "fatigue": 2.3801124977265126e-9,
+    "id": 53,
+    "memory_trace": 1.5848927304827596
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.164426564735746,
+    "fatigue": 2.63724376479392e-9,
+    "id": 54,
+    "memory_trace": 1.6442656473574584
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1658831010102229,
+    "fatigue": 2.922153756004344e-9,
+    "id": 55,
+    "memory_trace": 1.658831010102228
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.172515070531758,
+    "fatigue": 3.237843496957722e-9,
+    "id": 56,
+    "memory_trace": 1.7251507053175785
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1785497468093966,
+    "fatigue": 3.776461288185126e-9,
+    "id": 57,
+    "memory_trace": 1.785497468093966
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.1599603838881472,
+    "fatigue": 4.184444640648339e-9,
+    "id": 58,
+    "memory_trace": 1.5996038388814706
+  },
+  {
+    "activation_count": 17,
+    "excitability": 1.1282298368468773,
+    "fatigue": 4.404678569103515e-9,
+    "id": 59,
+    "memory_trace": 1.2822983684687725
+  },
+  {
+    "activation_count": 16,
+    "excitability": 1.1211390573533815,
+    "fatigue": 4.404678569103515e-9,
+    "id": 60,
+    "memory_trace": 1.2113905735338153
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.1641914581020123,
+    "fatigue": 4.184444640648339e-9,
+    "id": 61,
+    "memory_trace": 1.6419145810201237
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1785497468093966,
+    "fatigue": 3.776461288185126e-9,
+    "id": 62,
+    "memory_trace": 1.785497468093966
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1669446515753028,
+    "fatigue": 3.075951322109836e-9,
+    "id": 63,
+    "memory_trace": 1.6694465157530283
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1635193015915781,
+    "fatigue": 2.63724376479392e-9,
+    "id": 64,
+    "memory_trace": 1.6351930159157808
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.1598451796692348,
+    "fatigue": 2.3801124977265126e-9,
+    "id": 65,
+    "memory_trace": 1.5984517966923488
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.1598446231944055,
+    "fatigue": 2.1480515291981773e-9,
+    "id": 66,
+    "memory_trace": 1.5984462319440538
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.1567667875605854,
+    "fatigue": 1.9386165051013546e-9,
+    "id": 67,
+    "memory_trace": 1.5676678756058542
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1589831493878022,
+    "fatigue": 1.8416856798462867e-9,
+    "id": 68,
+    "memory_trace": 1.5898314938780231
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.156980385689351,
+    "fatigue": 1.7496013958539723e-9,
+    "id": 69,
+    "memory_trace": 1.5698038568935098
+  },
+  {
+    "activation_count": 21,
+    "excitability": 1.1591602774594854,
+    "fatigue": 1.7496013958539723e-9,
+    "id": 70,
+    "memory_trace": 1.5916027745948533
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.156980385689351,
+    "fatigue": 1.7496013958539723e-9,
+    "id": 71,
+    "memory_trace": 1.5698038568935098
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1589831493878022,
+    "fatigue": 1.8416856798462867e-9,
+    "id": 72,
+    "memory_trace": 1.5898314938780231
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.1567667875605854,
+    "fatigue": 1.9386165051013546e-9,
+    "id": 73,
+    "memory_trace": 1.5676678756058542
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.1598446231944055,
+    "fatigue": 2.1480515291981773e-9,
+    "id": 74,
+    "memory_trace": 1.5984462319440538
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.1598451796692348,
+    "fatigue": 2.3801124977265126e-9,
+    "id": 75,
+    "memory_trace": 1.5984517966923488
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1635193015915781,
+    "fatigue": 2.63724376479392e-9,
+    "id": 76,
+    "memory_trace": 1.6351930159157808
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1669446515753028,
+    "fatigue": 3.075951322109836e-9,
+    "id": 77,
+    "memory_trace": 1.6694465157530283
+  },
+  {
+    "activation_count": 18,
+    "excitability": 1.1569373810924777,
+    "fatigue": 3.5876382237758696e-9,
+    "id": 78,
+    "memory_trace": 1.5693738109247775
+  },
+  {
+    "activation_count": 16,
+    "excitability": 1.123674405091171,
+    "fatigue": 3.776461288185126e-9,
+    "id": 79,
+    "memory_trace": 1.2367440509117094
+  },
+  {
+    "activation_count": 16,
+    "excitability": 1.124033518456029,
+    "fatigue": 3.975222408615922e-9,
+    "id": 80,
+    "memory_trace": 1.2403351845602897
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1684708497094356,
+    "fatigue": 3.776461288185126e-9,
+    "id": 81,
+    "memory_trace": 1.6847084970943556
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.172515070531758,
+    "fatigue": 3.237843496957722e-9,
+    "id": 82,
+    "memory_trace": 1.7251507053175785
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1635193015915781,
+    "fatigue": 2.63724376479392e-9,
+    "id": 83,
+    "memory_trace": 1.6351930159157808
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1634243752291682,
+    "fatigue": 2.261106872840187e-9,
+    "id": 84,
+    "memory_trace": 1.6342437522916808
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1598816868499475,
+    "fatigue": 1.9386165051013546e-9,
+    "id": 85,
+    "memory_trace": 1.5988168684994757
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1630671918821585,
+    "fatigue": 1.7496013958539723e-9,
+    "id": 86,
+    "memory_trace": 1.6306719188215852
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.15447151810359,
+    "fatigue": 1.57901525975821e-9,
+    "id": 87,
+    "memory_trace": 1.5447151810359012
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1581134032404272,
+    "fatigue": 1.5000644967702994e-9,
+    "id": 88,
+    "memory_trace": 1.5811340324042726
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1576121757454307,
+    "fatigue": 1.4250612719317845e-9,
+    "id": 89,
+    "memory_trace": 1.5761217574543067
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1485119733493545,
+    "fatigue": 1.3538082083351952e-9,
+    "id": 90,
+    "memory_trace": 1.4851197334935442
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1576121757454307,
+    "fatigue": 1.4250612719317845e-9,
+    "id": 91,
+    "memory_trace": 1.5761217574543067
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1581134032404272,
+    "fatigue": 1.5000644967702994e-9,
+    "id": 92,
+    "memory_trace": 1.5811340324042726
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.15447151810359,
+    "fatigue": 1.57901525975821e-9,
+    "id": 93,
+    "memory_trace": 1.5447151810359012
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1630671918821585,
+    "fatigue": 1.7496013958539723e-9,
+    "id": 94,
+    "memory_trace": 1.6306719188215852
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1598816868499475,
+    "fatigue": 1.9386165051013546e-9,
+    "id": 95,
+    "memory_trace": 1.5988168684994757
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1634243752291682,
+    "fatigue": 2.261106872840187e-9,
+    "id": 96,
+    "memory_trace": 1.6342437522916808
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1635193015915781,
+    "fatigue": 2.63724376479392e-9,
+    "id": 97,
+    "memory_trace": 1.6351930159157808
+  },
+  {
+    "activation_count": 18,
+    "excitability": 1.1520773834557652,
+    "fatigue": 3.075951322109836e-9,
+    "id": 98,
+    "memory_trace": 1.5207738345576505
+  },
+  {
+    "activation_count": 16,
+    "excitability": 1.1161922387767784,
+    "fatigue": 3.237843496957722e-9,
+    "id": 99,
+    "memory_trace": 1.1619223877677833
+  },
+  {
+    "activation_count": 16,
+    "excitability": 1.124897914034526,
+    "fatigue": 3.5876382237758696e-9,
+    "id": 100,
+    "memory_trace": 1.2489791403452604
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.1595955129686468,
+    "fatigue": 3.408256312587076e-9,
+    "id": 101,
+    "memory_trace": 1.5959551296864674
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1658831010102229,
+    "fatigue": 2.922153756004344e-9,
+    "id": 102,
+    "memory_trace": 1.658831010102228
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.1598451796692348,
+    "fatigue": 2.3801124977265126e-9,
+    "id": 103,
+    "memory_trace": 1.5984517966923488
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1598816868499475,
+    "fatigue": 1.9386165051013546e-9,
+    "id": 104,
+    "memory_trace": 1.5988168684994757
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1595055699840167,
+    "fatigue": 1.6621213260612736e-9,
+    "id": 105,
+    "memory_trace": 1.5950556998401664
+  },
+  {
+    "activation_count": 21,
+    "excitability": 1.1663583765918473,
+    "fatigue": 1.5000644967702994e-9,
+    "id": 106,
+    "memory_trace": 1.6635837659184733
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1574655209542295,
+    "fatigue": 1.2861177979184354e-9,
+    "id": 107,
+    "memory_trace": 1.5746552095422945
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1574583986245672,
+    "fatigue": 1.2218119080225135e-9,
+    "id": 108,
+    "memory_trace": 1.5745839862456714
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1473313056348489,
+    "fatigue": 1.1026852469903184e-9,
+    "id": 109,
+    "memory_trace": 1.4733130563484889
+  },
+  {
+    "activation_count": 21,
+    "excitability": 1.1503072050594358,
+    "fatigue": 1.1026852469903184e-9,
+    "id": 110,
+    "memory_trace": 1.5030720505943584
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1473313056348489,
+    "fatigue": 1.1026852469903184e-9,
+    "id": 111,
+    "memory_trace": 1.4733130563484889
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1574583986245672,
+    "fatigue": 1.2218119080225135e-9,
+    "id": 112,
+    "memory_trace": 1.5745839862456714
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1574655209542295,
+    "fatigue": 1.2861177979184354e-9,
+    "id": 113,
+    "memory_trace": 1.5746552095422945
+  },
+  {
+    "activation_count": 21,
+    "excitability": 1.1663583765918473,
+    "fatigue": 1.5000644967702994e-9,
+    "id": 114,
+    "memory_trace": 1.6635837659184733
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1595055699840167,
+    "fatigue": 1.6621213260612736e-9,
+    "id": 115,
+    "memory_trace": 1.5950556998401664
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1598816868499475,
+    "fatigue": 1.9386165051013546e-9,
+    "id": 116,
+    "memory_trace": 1.5988168684994757
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.1598451796692348,
+    "fatigue": 2.3801124977265126e-9,
+    "id": 117,
+    "memory_trace": 1.5984517966923488
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.1522398827249833,
+    "fatigue": 2.63724376479392e-9,
+    "id": 118,
+    "memory_trace": 1.522398827249833
+  },
+  {
+    "activation_count": 16,
+    "excitability": 1.1200155423417604,
+    "fatigue": 2.922153756004344e-9,
+    "id": 119,
+    "memory_trace": 1.200155423417604
+  },
+  {
+    "activation_count": 17,
+    "excitability": 1.131996768732099,
+    "fatigue": 3.408256312587076e-9,
+    "id": 120,
+    "memory_trace": 1.3199676873209905
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1671784336393178,
+    "fatigue": 3.237843496957722e-9,
+    "id": 121,
+    "memory_trace": 1.6717843363931775
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.164426564735746,
+    "fatigue": 2.63724376479392e-9,
+    "id": 122,
+    "memory_trace": 1.6442656473574584
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.1598446231944055,
+    "fatigue": 2.1480515291981773e-9,
+    "id": 123,
+    "memory_trace": 1.5984462319440538
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1630671918821585,
+    "fatigue": 1.7496013958539723e-9,
+    "id": 124,
+    "memory_trace": 1.6306719188215852
+  },
+  {
+    "activation_count": 21,
+    "excitability": 1.1663583765918473,
+    "fatigue": 1.5000644967702994e-9,
+    "id": 125,
+    "memory_trace": 1.6635837659184733
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1553047599252073,
+    "fatigue": 1.2218119080225135e-9,
+    "id": 126,
+    "memory_trace": 1.5530475992520736
+  },
+  {
+    "activation_count": 21,
+    "excitability": 1.1615776007900953,
+    "fatigue": 1.1026852469903184e-9,
+    "id": 127,
+    "memory_trace": 1.6157760079009522
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.15161383984897,
+    "fatigue": 9.454147636383242e-10,
+    "id": 128,
+    "memory_trace": 1.5161383984896997
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1484601656927118,
+    "fatigue": 8.98144025456408e-10,
+    "id": 129,
+    "memory_trace": 1.484601656927119
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1421389144662175,
+    "fatigue": 8.532368241835875e-10,
+    "id": 130,
+    "memory_trace": 1.4213891446621747
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1484601656927118,
+    "fatigue": 8.98144025456408e-10,
+    "id": 131,
+    "memory_trace": 1.484601656927119
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.15161383984897,
+    "fatigue": 9.454147636383242e-10,
+    "id": 132,
+    "memory_trace": 1.5161383984896997
+  },
+  {
+    "activation_count": 21,
+    "excitability": 1.1615776007900953,
+    "fatigue": 1.1026852469903184e-9,
+    "id": 133,
+    "memory_trace": 1.6157760079009522
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1553047599252073,
+    "fatigue": 1.2218119080225135e-9,
+    "id": 134,
+    "memory_trace": 1.5530475992520736
+  },
+  {
+    "activation_count": 21,
+    "excitability": 1.1663583765918473,
+    "fatigue": 1.5000644967702994e-9,
+    "id": 135,
+    "memory_trace": 1.6635837659184733
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1630671918821585,
+    "fatigue": 1.7496013958539723e-9,
+    "id": 136,
+    "memory_trace": 1.6306719188215852
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.1598446231944055,
+    "fatigue": 2.1480515291981773e-9,
+    "id": 137,
+    "memory_trace": 1.5984462319440538
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.153441375539113,
+    "fatigue": 2.505381576554224e-9,
+    "id": 138,
+    "memory_trace": 1.5344137553911297
+  },
+  {
+    "activation_count": 16,
+    "excitability": 1.1189399589981166,
+    "fatigue": 2.63724376479392e-9,
+    "id": 139,
+    "memory_trace": 1.189399589981167
+  },
+  {
+    "activation_count": 17,
+    "excitability": 1.1348980142282383,
+    "fatigue": 3.237843496957722e-9,
+    "id": 140,
+    "memory_trace": 1.348980142282383
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1696432808395802,
+    "fatigue": 3.075951322109836e-9,
+    "id": 141,
+    "memory_trace": 1.6964328083958031
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.1584892730482759,
+    "fatigue": 2.3801124977265126e-9,
+    "id": 142,
+    "memory_trace": 1.5848927304827596
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.1567667875605854,
+    "fatigue": 1.9386165051013546e-9,
+    "id": 143,
+    "memory_trace": 1.5676678756058542
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.15447151810359,
+    "fatigue": 1.57901525975821e-9,
+    "id": 144,
+    "memory_trace": 1.5447151810359012
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1574655209542295,
+    "fatigue": 1.2861177979184354e-9,
+    "id": 145,
+    "memory_trace": 1.5746552095422945
+  },
+  {
+    "activation_count": 21,
+    "excitability": 1.1615776007900953,
+    "fatigue": 1.1026852469903184e-9,
+    "id": 146,
+    "memory_trace": 1.6157760079009522
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1510570558610156,
+    "fatigue": 8.98144025456408e-10,
+    "id": 147,
+    "memory_trace": 1.5105705586101563
+  },
+  {
+    "activation_count": 21,
+    "excitability": 1.1566213705822632,
+    "fatigue": 8.105749829744081e-10,
+    "id": 148,
+    "memory_trace": 1.5662137058226322
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.1467095833659413,
+    "fatigue": 7.315439221344033e-10,
+    "id": 149,
+    "memory_trace": 1.467095833659413
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1430150399364565,
+    "fatigue": 6.949667260276831e-10,
+    "id": 150,
+    "memory_trace": 1.4301503993645643
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.1467095833659413,
+    "fatigue": 7.315439221344033e-10,
+    "id": 151,
+    "memory_trace": 1.467095833659413
+  },
+  {
+    "activation_count": 21,
+    "excitability": 1.1566213705822632,
+    "fatigue": 8.105749829744081e-10,
+    "id": 152,
+    "memory_trace": 1.5662137058226322
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1510570558610156,
+    "fatigue": 8.98144025456408e-10,
+    "id": 153,
+    "memory_trace": 1.5105705586101563
+  },
+  {
+    "activation_count": 21,
+    "excitability": 1.1615776007900953,
+    "fatigue": 1.1026852469903184e-9,
+    "id": 154,
+    "memory_trace": 1.6157760079009522
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1574655209542295,
+    "fatigue": 1.2861177979184354e-9,
+    "id": 155,
+    "memory_trace": 1.5746552095422945
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.15447151810359,
+    "fatigue": 1.57901525975821e-9,
+    "id": 156,
+    "memory_trace": 1.5447151810359012
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.1567667875605854,
+    "fatigue": 1.9386165051013546e-9,
+    "id": 157,
+    "memory_trace": 1.5676678756058542
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.1584892730482759,
+    "fatigue": 2.3801124977265126e-9,
+    "id": 158,
+    "memory_trace": 1.5848927304827596
+  },
+  {
+    "activation_count": 16,
+    "excitability": 1.1232575498966297,
+    "fatigue": 2.505381576554224e-9,
+    "id": 159,
+    "memory_trace": 1.2325754989662967
+  },
+  {
+    "activation_count": 17,
+    "excitability": 1.1330796745813227,
+    "fatigue": 3.075951322109836e-9,
+    "id": 160,
+    "memory_trace": 1.3307967458132286
+  },
+  {
+    "activation_count": 21,
+    "excitability": 1.1678558847375777,
+    "fatigue": 2.922153756004344e-9,
+    "id": 161,
+    "memory_trace": 1.6785588473757775
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1589340548610543,
+    "fatigue": 2.261106872840187e-9,
+    "id": 162,
+    "memory_trace": 1.589340548610542
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1589831493878022,
+    "fatigue": 1.8416856798462867e-9,
+    "id": 163,
+    "memory_trace": 1.5898314938780231
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1581134032404272,
+    "fatigue": 1.5000644967702994e-9,
+    "id": 164,
+    "memory_trace": 1.5811340324042726
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1574583986245672,
+    "fatigue": 1.2218119080225135e-9,
+    "id": 165,
+    "memory_trace": 1.5745839862456714
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.15161383984897,
+    "fatigue": 9.454147636383242e-10,
+    "id": 166,
+    "memory_trace": 1.5161383984896997
+  },
+  {
+    "activation_count": 21,
+    "excitability": 1.1566213705822632,
+    "fatigue": 8.105749829744081e-10,
+    "id": 167,
+    "memory_trace": 1.5662137058226322
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.147173766233598,
+    "fatigue": 6.602183897262989e-10,
+    "id": 168,
+    "memory_trace": 1.4717376623359797
+  },
+  {
+    "activation_count": 23,
+    "excitability": 1.1596074109341465,
+    "fatigue": 5.958470967279847e-10,
+    "id": 169,
+    "memory_trace": 1.5960741093414643
+  },
+  {
+    "activation_count": 23,
+    "excitability": 1.148279217605508,
+    "fatigue": 5.660547418915854e-10,
+    "id": 170,
+    "memory_trace": 1.4827921760550813
+  },
+  {
+    "activation_count": 23,
+    "excitability": 1.1596074109341465,
+    "fatigue": 5.958470967279847e-10,
+    "id": 171,
+    "memory_trace": 1.5960741093414643
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.147173766233598,
+    "fatigue": 6.602183897262989e-10,
+    "id": 172,
+    "memory_trace": 1.4717376623359797
+  },
+  {
+    "activation_count": 21,
+    "excitability": 1.1566213705822632,
+    "fatigue": 8.105749829744081e-10,
+    "id": 173,
+    "memory_trace": 1.5662137058226322
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.15161383984897,
+    "fatigue": 9.454147636383242e-10,
+    "id": 174,
+    "memory_trace": 1.5161383984896997
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1574583986245672,
+    "fatigue": 1.2218119080225135e-9,
+    "id": 175,
+    "memory_trace": 1.5745839862456714
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1581134032404272,
+    "fatigue": 1.5000644967702994e-9,
+    "id": 176,
+    "memory_trace": 1.5811340324042726
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1589831493878022,
+    "fatigue": 1.8416856798462867e-9,
+    "id": 177,
+    "memory_trace": 1.5898314938780231
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1589340548610543,
+    "fatigue": 2.261106872840187e-9,
+    "id": 178,
+    "memory_trace": 1.589340548610542
+  },
+  {
+    "activation_count": 17,
+    "excitability": 1.123738754306434,
+    "fatigue": 2.3801124977265126e-9,
+    "id": 179,
+    "memory_trace": 1.2373875430643408
+  },
+  {
+    "activation_count": 18,
+    "excitability": 1.1366013816819431,
+    "fatigue": 2.922153756004344e-9,
+    "id": 180,
+    "memory_trace": 1.3660138168194311
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.16260753843455,
+    "fatigue": 2.7760460682041266e-9,
+    "id": 181,
+    "memory_trace": 1.6260753843455003
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.155624775065379,
+    "fatigue": 2.1480515291981773e-9,
+    "id": 182,
+    "memory_trace": 1.5562477506537888
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.156980385689351,
+    "fatigue": 1.7496013958539723e-9,
+    "id": 183,
+    "memory_trace": 1.5698038568935098
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1576121757454307,
+    "fatigue": 1.4250612719317845e-9,
+    "id": 184,
+    "memory_trace": 1.5761217574543067
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1473313056348489,
+    "fatigue": 1.1026852469903184e-9,
+    "id": 185,
+    "memory_trace": 1.4733130563484889
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1484601656927118,
+    "fatigue": 8.98144025456408e-10,
+    "id": 186,
+    "memory_trace": 1.484601656927119
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.1467095833659413,
+    "fatigue": 7.315439221344033e-10,
+    "id": 187,
+    "memory_trace": 1.467095833659413
+  },
+  {
+    "activation_count": 23,
+    "excitability": 1.1596074109341465,
+    "fatigue": 5.958470967279847e-10,
+    "id": 188,
+    "memory_trace": 1.5960741093414643
+  },
+  {
+    "activation_count": 21,
+    "excitability": 1.13166204714832,
+    "fatigue": 4.161022504143318e-10,
+    "id": 189,
+    "memory_trace": 1.316620471483201
+  },
+  {
+    "activation_count": 23,
+    "excitability": 1.1425659744934524,
+    "fatigue": 3.9529713789361517e-10,
+    "id": 190,
+    "memory_trace": 1.4256597449345236
+  },
+  {
+    "activation_count": 21,
+    "excitability": 1.13166204714832,
+    "fatigue": 4.161022504143318e-10,
+    "id": 191,
+    "memory_trace": 1.316620471483201
+  },
+  {
+    "activation_count": 23,
+    "excitability": 1.1596074109341465,
+    "fatigue": 5.958470967279847e-10,
+    "id": 192,
+    "memory_trace": 1.5960741093414643
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.1467095833659413,
+    "fatigue": 7.315439221344033e-10,
+    "id": 193,
+    "memory_trace": 1.467095833659413
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1484601656927118,
+    "fatigue": 8.98144025456408e-10,
+    "id": 194,
+    "memory_trace": 1.484601656927119
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1473313056348489,
+    "fatigue": 1.1026852469903184e-9,
+    "id": 195,
+    "memory_trace": 1.4733130563484889
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1576121757454307,
+    "fatigue": 1.4250612719317845e-9,
+    "id": 196,
+    "memory_trace": 1.5761217574543067
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.156980385689351,
+    "fatigue": 1.7496013958539723e-9,
+    "id": 197,
+    "memory_trace": 1.5698038568935098
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.155624775065379,
+    "fatigue": 2.1480515291981773e-9,
+    "id": 198,
+    "memory_trace": 1.5562477506537888
+  },
+  {
+    "activation_count": 17,
+    "excitability": 1.128728357667377,
+    "fatigue": 2.261106872840187e-9,
+    "id": 199,
+    "memory_trace": 1.2872835766737698
+  },
+  {
+    "activation_count": 17,
+    "excitability": 1.1275939843676983,
+    "fatigue": 2.7760460682041266e-9,
+    "id": 200,
+    "memory_trace": 1.2759398436769838
+  },
+  {
+    "activation_count": 21,
+    "excitability": 1.1630635968167113,
+    "fatigue": 2.7760460682041266e-9,
+    "id": 201,
+    "memory_trace": 1.630635968167113
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1567057708242117,
+    "fatigue": 2.1480515291981773e-9,
+    "id": 202,
+    "memory_trace": 1.5670577082421175
+  },
+  {
+    "activation_count": 21,
+    "excitability": 1.1591602774594854,
+    "fatigue": 1.7496013958539723e-9,
+    "id": 203,
+    "memory_trace": 1.5916027745948533
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1485119733493545,
+    "fatigue": 1.3538082083351952e-9,
+    "id": 204,
+    "memory_trace": 1.4851197334935442
+  },
+  {
+    "activation_count": 21,
+    "excitability": 1.1503072050594358,
+    "fatigue": 1.1026852469903184e-9,
+    "id": 205,
+    "memory_trace": 1.5030720505943584
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1421389144662175,
+    "fatigue": 8.532368241835875e-10,
+    "id": 206,
+    "memory_trace": 1.4213891446621747
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1430150399364565,
+    "fatigue": 6.949667260276831e-10,
+    "id": 207,
+    "memory_trace": 1.4301503993645643
+  },
+  {
+    "activation_count": 23,
+    "excitability": 1.148279217605508,
+    "fatigue": 5.660547418915854e-10,
+    "id": 208,
+    "memory_trace": 1.4827921760550813
+  },
+  {
+    "activation_count": 23,
+    "excitability": 1.1425659744934524,
+    "fatigue": 3.9529713789361517e-10,
+    "id": 209,
+    "memory_trace": 1.425659744934524
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.1254965011753135,
+    "fatigue": 3.0587338995038824e-10,
+    "id": 210,
+    "memory_trace": 1.2549650117531357
+  },
+  {
+    "activation_count": 23,
+    "excitability": 1.1425659744934524,
+    "fatigue": 3.9529713789361517e-10,
+    "id": 211,
+    "memory_trace": 1.425659744934524
+  },
+  {
+    "activation_count": 23,
+    "excitability": 1.148279217605508,
+    "fatigue": 5.660547418915854e-10,
+    "id": 212,
+    "memory_trace": 1.4827921760550813
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1430150399364565,
+    "fatigue": 6.949667260276831e-10,
+    "id": 213,
+    "memory_trace": 1.4301503993645643
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1421389144662175,
+    "fatigue": 8.532368241835875e-10,
+    "id": 214,
+    "memory_trace": 1.4213891446621747
+  },
+  {
+    "activation_count": 21,
+    "excitability": 1.1503072050594358,
+    "fatigue": 1.1026852469903184e-9,
+    "id": 215,
+    "memory_trace": 1.5030720505943584
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1485119733493545,
+    "fatigue": 1.3538082083351952e-9,
+    "id": 216,
+    "memory_trace": 1.4851197334935442
+  },
+  {
+    "activation_count": 21,
+    "excitability": 1.1591602774594854,
+    "fatigue": 1.7496013958539723e-9,
+    "id": 217,
+    "memory_trace": 1.5916027745948533
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1567057708242117,
+    "fatigue": 2.1480515291981773e-9,
+    "id": 218,
+    "memory_trace": 1.5670577082421175
+  },
+  {
+    "activation_count": 17,
+    "excitability": 1.1202282707227844,
+    "fatigue": 2.1480515291981773e-9,
+    "id": 219,
+    "memory_trace": 1.2022827072278448
+  },
+  {
+    "activation_count": 18,
+    "excitability": 1.1366013816819431,
+    "fatigue": 2.922153756004344e-9,
+    "id": 220,
+    "memory_trace": 1.3660138168194311
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.16260753843455,
+    "fatigue": 2.7760460682041266e-9,
+    "id": 221,
+    "memory_trace": 1.6260753843455003
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.155624775065379,
+    "fatigue": 2.1480515291981773e-9,
+    "id": 222,
+    "memory_trace": 1.5562477506537888
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.156980385689351,
+    "fatigue": 1.7496013958539723e-9,
+    "id": 223,
+    "memory_trace": 1.5698038568935098
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1576121757454307,
+    "fatigue": 1.4250612719317845e-9,
+    "id": 224,
+    "memory_trace": 1.5761217574543067
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1473313056348489,
+    "fatigue": 1.1026852469903184e-9,
+    "id": 225,
+    "memory_trace": 1.4733130563484889
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1484601656927118,
+    "fatigue": 8.98144025456408e-10,
+    "id": 226,
+    "memory_trace": 1.484601656927119
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.1467095833659413,
+    "fatigue": 7.315439221344033e-10,
+    "id": 227,
+    "memory_trace": 1.467095833659413
+  },
+  {
+    "activation_count": 23,
+    "excitability": 1.1596074109341465,
+    "fatigue": 5.958470967279847e-10,
+    "id": 228,
+    "memory_trace": 1.5960741093414643
+  },
+  {
+    "activation_count": 21,
+    "excitability": 1.13166204714832,
+    "fatigue": 4.161022504143318e-10,
+    "id": 229,
+    "memory_trace": 1.316620471483201
+  },
+  {
+    "activation_count": 23,
+    "excitability": 1.1425659744934524,
+    "fatigue": 3.9529713789361517e-10,
+    "id": 230,
+    "memory_trace": 1.425659744934524
+  },
+  {
+    "activation_count": 21,
+    "excitability": 1.13166204714832,
+    "fatigue": 4.161022504143318e-10,
+    "id": 231,
+    "memory_trace": 1.316620471483201
+  },
+  {
+    "activation_count": 23,
+    "excitability": 1.1596074109341465,
+    "fatigue": 5.958470967279847e-10,
+    "id": 232,
+    "memory_trace": 1.5960741093414643
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.1467095833659413,
+    "fatigue": 7.315439221344033e-10,
+    "id": 233,
+    "memory_trace": 1.467095833659413
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1484601656927118,
+    "fatigue": 8.98144025456408e-10,
+    "id": 234,
+    "memory_trace": 1.484601656927119
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1473313056348489,
+    "fatigue": 1.1026852469903184e-9,
+    "id": 235,
+    "memory_trace": 1.4733130563484889
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1576121757454307,
+    "fatigue": 1.4250612719317845e-9,
+    "id": 236,
+    "memory_trace": 1.5761217574543067
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.156980385689351,
+    "fatigue": 1.7496013958539723e-9,
+    "id": 237,
+    "memory_trace": 1.5698038568935098
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.155624775065379,
+    "fatigue": 2.1480515291981773e-9,
+    "id": 238,
+    "memory_trace": 1.5562477506537888
+  },
+  {
+    "activation_count": 17,
+    "excitability": 1.128728357667377,
+    "fatigue": 2.261106872840187e-9,
+    "id": 239,
+    "memory_trace": 1.2872835766737698
+  },
+  {
+    "activation_count": 17,
+    "excitability": 1.1330796745813227,
+    "fatigue": 3.075951322109836e-9,
+    "id": 240,
+    "memory_trace": 1.3307967458132286
+  },
+  {
+    "activation_count": 21,
+    "excitability": 1.1678558847375777,
+    "fatigue": 2.922153756004344e-9,
+    "id": 241,
+    "memory_trace": 1.6785588473757775
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1589340548610543,
+    "fatigue": 2.261106872840187e-9,
+    "id": 242,
+    "memory_trace": 1.589340548610542
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1589831493878022,
+    "fatigue": 1.8416856798462867e-9,
+    "id": 243,
+    "memory_trace": 1.5898314938780231
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1581134032404272,
+    "fatigue": 1.5000644967702994e-9,
+    "id": 244,
+    "memory_trace": 1.5811340324042726
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1574583986245672,
+    "fatigue": 1.2218119080225135e-9,
+    "id": 245,
+    "memory_trace": 1.5745839862456714
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.15161383984897,
+    "fatigue": 9.454147636383242e-10,
+    "id": 246,
+    "memory_trace": 1.5161383984896997
+  },
+  {
+    "activation_count": 21,
+    "excitability": 1.1566213705822632,
+    "fatigue": 8.105749829744081e-10,
+    "id": 247,
+    "memory_trace": 1.5662137058226322
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.147173766233598,
+    "fatigue": 6.602183897262989e-10,
+    "id": 248,
+    "memory_trace": 1.4717376623359797
+  },
+  {
+    "activation_count": 23,
+    "excitability": 1.1596074109341465,
+    "fatigue": 5.958470967279847e-10,
+    "id": 249,
+    "memory_trace": 1.5960741093414643
+  },
+  {
+    "activation_count": 23,
+    "excitability": 1.148279217605508,
+    "fatigue": 5.660547418915854e-10,
+    "id": 250,
+    "memory_trace": 1.4827921760550813
+  },
+  {
+    "activation_count": 23,
+    "excitability": 1.1596074109341465,
+    "fatigue": 5.958470967279847e-10,
+    "id": 251,
+    "memory_trace": 1.5960741093414643
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.147173766233598,
+    "fatigue": 6.602183897262989e-10,
+    "id": 252,
+    "memory_trace": 1.4717376623359797
+  },
+  {
+    "activation_count": 21,
+    "excitability": 1.1566213705822632,
+    "fatigue": 8.105749829744081e-10,
+    "id": 253,
+    "memory_trace": 1.5662137058226322
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.15161383984897,
+    "fatigue": 9.454147636383242e-10,
+    "id": 254,
+    "memory_trace": 1.5161383984896997
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1574583986245672,
+    "fatigue": 1.2218119080225135e-9,
+    "id": 255,
+    "memory_trace": 1.5745839862456714
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1581134032404272,
+    "fatigue": 1.5000644967702994e-9,
+    "id": 256,
+    "memory_trace": 1.5811340324042726
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1589831493878022,
+    "fatigue": 1.8416856798462867e-9,
+    "id": 257,
+    "memory_trace": 1.5898314938780231
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1589340548610543,
+    "fatigue": 2.261106872840187e-9,
+    "id": 258,
+    "memory_trace": 1.589340548610542
+  },
+  {
+    "activation_count": 17,
+    "excitability": 1.123738754306434,
+    "fatigue": 2.3801124977265126e-9,
+    "id": 259,
+    "memory_trace": 1.2373875430643408
+  },
+  {
+    "activation_count": 17,
+    "excitability": 1.1348980142282383,
+    "fatigue": 3.237843496957722e-9,
+    "id": 260,
+    "memory_trace": 1.348980142282383
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1696432808395802,
+    "fatigue": 3.075951322109836e-9,
+    "id": 261,
+    "memory_trace": 1.6964328083958031
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.1584892730482759,
+    "fatigue": 2.3801124977265126e-9,
+    "id": 262,
+    "memory_trace": 1.5848927304827596
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.1567667875605854,
+    "fatigue": 1.9386165051013546e-9,
+    "id": 263,
+    "memory_trace": 1.5676678756058542
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.15447151810359,
+    "fatigue": 1.57901525975821e-9,
+    "id": 264,
+    "memory_trace": 1.5447151810359012
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1574655209542295,
+    "fatigue": 1.2861177979184354e-9,
+    "id": 265,
+    "memory_trace": 1.5746552095422945
+  },
+  {
+    "activation_count": 21,
+    "excitability": 1.1615776007900953,
+    "fatigue": 1.1026852469903184e-9,
+    "id": 266,
+    "memory_trace": 1.6157760079009522
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1510570558610156,
+    "fatigue": 8.98144025456408e-10,
+    "id": 267,
+    "memory_trace": 1.5105705586101563
+  },
+  {
+    "activation_count": 21,
+    "excitability": 1.1566213705822632,
+    "fatigue": 8.105749829744081e-10,
+    "id": 268,
+    "memory_trace": 1.5662137058226322
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.1467095833659413,
+    "fatigue": 7.315439221344033e-10,
+    "id": 269,
+    "memory_trace": 1.467095833659413
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1430150399364565,
+    "fatigue": 6.949667260276831e-10,
+    "id": 270,
+    "memory_trace": 1.4301503993645643
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.1467095833659413,
+    "fatigue": 7.315439221344033e-10,
+    "id": 271,
+    "memory_trace": 1.467095833659413
+  },
+  {
+    "activation_count": 21,
+    "excitability": 1.1566213705822632,
+    "fatigue": 8.105749829744081e-10,
+    "id": 272,
+    "memory_trace": 1.5662137058226322
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1510570558610156,
+    "fatigue": 8.98144025456408e-10,
+    "id": 273,
+    "memory_trace": 1.5105705586101563
+  },
+  {
+    "activation_count": 21,
+    "excitability": 1.1615776007900953,
+    "fatigue": 1.1026852469903184e-9,
+    "id": 274,
+    "memory_trace": 1.6157760079009522
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1574655209542295,
+    "fatigue": 1.2861177979184354e-9,
+    "id": 275,
+    "memory_trace": 1.5746552095422945
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.15447151810359,
+    "fatigue": 1.57901525975821e-9,
+    "id": 276,
+    "memory_trace": 1.5447151810359012
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.1567667875605854,
+    "fatigue": 1.9386165051013546e-9,
+    "id": 277,
+    "memory_trace": 1.5676678756058542
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.1584892730482759,
+    "fatigue": 2.3801124977265126e-9,
+    "id": 278,
+    "memory_trace": 1.5848927304827596
+  },
+  {
+    "activation_count": 16,
+    "excitability": 1.1232575498966297,
+    "fatigue": 2.505381576554224e-9,
+    "id": 279,
+    "memory_trace": 1.2325754989662967
+  },
+  {
+    "activation_count": 17,
+    "excitability": 1.131996768732099,
+    "fatigue": 3.408256312587076e-9,
+    "id": 280,
+    "memory_trace": 1.31996768732099
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1671784336393178,
+    "fatigue": 3.237843496957722e-9,
+    "id": 281,
+    "memory_trace": 1.6717843363931775
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.164426564735746,
+    "fatigue": 2.63724376479392e-9,
+    "id": 282,
+    "memory_trace": 1.6442656473574584
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.1598446231944055,
+    "fatigue": 2.1480515291981773e-9,
+    "id": 283,
+    "memory_trace": 1.5984462319440538
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1630671918821585,
+    "fatigue": 1.7496013958539723e-9,
+    "id": 284,
+    "memory_trace": 1.6306719188215852
+  },
+  {
+    "activation_count": 21,
+    "excitability": 1.1663583765918473,
+    "fatigue": 1.5000644967702994e-9,
+    "id": 285,
+    "memory_trace": 1.6635837659184733
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1553047599252073,
+    "fatigue": 1.2218119080225135e-9,
+    "id": 286,
+    "memory_trace": 1.5530475992520736
+  },
+  {
+    "activation_count": 21,
+    "excitability": 1.1615776007900953,
+    "fatigue": 1.1026852469903184e-9,
+    "id": 287,
+    "memory_trace": 1.6157760079009522
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.15161383984897,
+    "fatigue": 9.454147636383242e-10,
+    "id": 288,
+    "memory_trace": 1.5161383984896997
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1484601656927118,
+    "fatigue": 8.98144025456408e-10,
+    "id": 289,
+    "memory_trace": 1.484601656927119
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1421389144662175,
+    "fatigue": 8.532368241835875e-10,
+    "id": 290,
+    "memory_trace": 1.4213891446621747
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1484601656927118,
+    "fatigue": 8.98144025456408e-10,
+    "id": 291,
+    "memory_trace": 1.484601656927119
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.15161383984897,
+    "fatigue": 9.454147636383242e-10,
+    "id": 292,
+    "memory_trace": 1.5161383984896997
+  },
+  {
+    "activation_count": 21,
+    "excitability": 1.1615776007900953,
+    "fatigue": 1.1026852469903184e-9,
+    "id": 293,
+    "memory_trace": 1.6157760079009522
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1553047599252073,
+    "fatigue": 1.2218119080225135e-9,
+    "id": 294,
+    "memory_trace": 1.5530475992520736
+  },
+  {
+    "activation_count": 21,
+    "excitability": 1.1663583765918473,
+    "fatigue": 1.5000644967702994e-9,
+    "id": 295,
+    "memory_trace": 1.6635837659184733
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1630671918821585,
+    "fatigue": 1.7496013958539723e-9,
+    "id": 296,
+    "memory_trace": 1.6306719188215852
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.1598446231944055,
+    "fatigue": 2.1480515291981773e-9,
+    "id": 297,
+    "memory_trace": 1.5984462319440538
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.153441375539113,
+    "fatigue": 2.505381576554224e-9,
+    "id": 298,
+    "memory_trace": 1.5344137553911297
+  },
+  {
+    "activation_count": 16,
+    "excitability": 1.1189399589981166,
+    "fatigue": 2.63724376479392e-9,
+    "id": 299,
+    "memory_trace": 1.189399589981167
+  },
+  {
+    "activation_count": 16,
+    "excitability": 1.124897914034526,
+    "fatigue": 3.5876382237758696e-9,
+    "id": 300,
+    "memory_trace": 1.2489791403452604
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.1595955129686468,
+    "fatigue": 3.408256312587076e-9,
+    "id": 301,
+    "memory_trace": 1.5959551296864674
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1658831010102229,
+    "fatigue": 2.922153756004344e-9,
+    "id": 302,
+    "memory_trace": 1.658831010102228
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.1598451796692348,
+    "fatigue": 2.3801124977265126e-9,
+    "id": 303,
+    "memory_trace": 1.5984517966923488
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1598816868499475,
+    "fatigue": 1.9386165051013546e-9,
+    "id": 304,
+    "memory_trace": 1.5988168684994757
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1595055699840167,
+    "fatigue": 1.6621213260612736e-9,
+    "id": 305,
+    "memory_trace": 1.5950556998401664
+  },
+  {
+    "activation_count": 21,
+    "excitability": 1.1663583765918473,
+    "fatigue": 1.5000644967702994e-9,
+    "id": 306,
+    "memory_trace": 1.6635837659184733
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1574655209542295,
+    "fatigue": 1.2861177979184354e-9,
+    "id": 307,
+    "memory_trace": 1.5746552095422945
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1574583986245672,
+    "fatigue": 1.2218119080225135e-9,
+    "id": 308,
+    "memory_trace": 1.5745839862456714
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1473313056348489,
+    "fatigue": 1.1026852469903184e-9,
+    "id": 309,
+    "memory_trace": 1.4733130563484889
+  },
+  {
+    "activation_count": 21,
+    "excitability": 1.1503072050594358,
+    "fatigue": 1.1026852469903184e-9,
+    "id": 310,
+    "memory_trace": 1.5030720505943584
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1473313056348489,
+    "fatigue": 1.1026852469903184e-9,
+    "id": 311,
+    "memory_trace": 1.4733130563484889
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1574583986245672,
+    "fatigue": 1.2218119080225135e-9,
+    "id": 312,
+    "memory_trace": 1.5745839862456714
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1574655209542295,
+    "fatigue": 1.2861177979184354e-9,
+    "id": 313,
+    "memory_trace": 1.5746552095422945
+  },
+  {
+    "activation_count": 21,
+    "excitability": 1.1663583765918473,
+    "fatigue": 1.5000644967702994e-9,
+    "id": 314,
+    "memory_trace": 1.6635837659184733
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1595055699840167,
+    "fatigue": 1.6621213260612736e-9,
+    "id": 315,
+    "memory_trace": 1.5950556998401664
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1598816868499475,
+    "fatigue": 1.9386165051013546e-9,
+    "id": 316,
+    "memory_trace": 1.5988168684994757
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.1598451796692348,
+    "fatigue": 2.3801124977265126e-9,
+    "id": 317,
+    "memory_trace": 1.5984517966923488
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.1522398827249833,
+    "fatigue": 2.63724376479392e-9,
+    "id": 318,
+    "memory_trace": 1.522398827249833
+  },
+  {
+    "activation_count": 16,
+    "excitability": 1.1200155423417604,
+    "fatigue": 2.922153756004344e-9,
+    "id": 319,
+    "memory_trace": 1.200155423417604
+  },
+  {
+    "activation_count": 16,
+    "excitability": 1.124033518415511,
+    "fatigue": 3.975222408615922e-9,
+    "id": 320,
+    "memory_trace": 1.2403351841551093
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1684708497094356,
+    "fatigue": 3.776461288185126e-9,
+    "id": 321,
+    "memory_trace": 1.6847084970943556
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.172515070531758,
+    "fatigue": 3.237843496957722e-9,
+    "id": 322,
+    "memory_trace": 1.7251507053175785
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1635193015915781,
+    "fatigue": 2.63724376479392e-9,
+    "id": 323,
+    "memory_trace": 1.6351930159157808
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1634243752291682,
+    "fatigue": 2.261106872840187e-9,
+    "id": 324,
+    "memory_trace": 1.6342437522916808
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1598816868499475,
+    "fatigue": 1.9386165051013546e-9,
+    "id": 325,
+    "memory_trace": 1.5988168684994757
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1630671918821585,
+    "fatigue": 1.7496013958539723e-9,
+    "id": 326,
+    "memory_trace": 1.6306719188215852
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.15447151810359,
+    "fatigue": 1.57901525975821e-9,
+    "id": 327,
+    "memory_trace": 1.5447151810359012
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1581134032404272,
+    "fatigue": 1.5000644967702994e-9,
+    "id": 328,
+    "memory_trace": 1.5811340324042726
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1576121757454307,
+    "fatigue": 1.4250612719317845e-9,
+    "id": 329,
+    "memory_trace": 1.5761217574543067
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1485119733493545,
+    "fatigue": 1.3538082083351952e-9,
+    "id": 330,
+    "memory_trace": 1.4851197334935442
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1576121757454307,
+    "fatigue": 1.4250612719317845e-9,
+    "id": 331,
+    "memory_trace": 1.5761217574543067
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1581134032404272,
+    "fatigue": 1.5000644967702994e-9,
+    "id": 332,
+    "memory_trace": 1.5811340324042726
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.15447151810359,
+    "fatigue": 1.57901525975821e-9,
+    "id": 333,
+    "memory_trace": 1.5447151810359012
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1630671918821585,
+    "fatigue": 1.7496013958539723e-9,
+    "id": 334,
+    "memory_trace": 1.6306719188215852
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1598816868499475,
+    "fatigue": 1.9386165051013546e-9,
+    "id": 335,
+    "memory_trace": 1.5988168684994757
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1634243752291682,
+    "fatigue": 2.261106872840187e-9,
+    "id": 336,
+    "memory_trace": 1.6342437522916808
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1635193015915781,
+    "fatigue": 2.63724376479392e-9,
+    "id": 337,
+    "memory_trace": 1.6351930159157808
+  },
+  {
+    "activation_count": 18,
+    "excitability": 1.1520773834557652,
+    "fatigue": 3.075951322109836e-9,
+    "id": 338,
+    "memory_trace": 1.5207738345576505
+  },
+  {
+    "activation_count": 16,
+    "excitability": 1.1161922387767784,
+    "fatigue": 3.237843496957722e-9,
+    "id": 339,
+    "memory_trace": 1.1619223877677833
+  },
+  {
+    "activation_count": 16,
+    "excitability": 1.1211389914060361,
+    "fatigue": 4.404678569103515e-9,
+    "id": 340,
+    "memory_trace": 1.2113899140603603
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.1641914568806857,
+    "fatigue": 4.184444640648339e-9,
+    "id": 341,
+    "memory_trace": 1.6419145688068577
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1785497468093966,
+    "fatigue": 3.776461288185126e-9,
+    "id": 342,
+    "memory_trace": 1.785497468093966
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1669446515753028,
+    "fatigue": 3.075951322109836e-9,
+    "id": 343,
+    "memory_trace": 1.6694465157530283
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1635193015915781,
+    "fatigue": 2.63724376479392e-9,
+    "id": 344,
+    "memory_trace": 1.6351930159157808
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.1598451796692348,
+    "fatigue": 2.3801124977265126e-9,
+    "id": 345,
+    "memory_trace": 1.5984517966923488
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.1598446231944055,
+    "fatigue": 2.1480515291981773e-9,
+    "id": 346,
+    "memory_trace": 1.5984462319440538
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.1567667875605854,
+    "fatigue": 1.9386165051013546e-9,
+    "id": 347,
+    "memory_trace": 1.5676678756058542
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1589831493878022,
+    "fatigue": 1.8416856798462867e-9,
+    "id": 348,
+    "memory_trace": 1.5898314938780231
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.156980385689351,
+    "fatigue": 1.7496013958539723e-9,
+    "id": 349,
+    "memory_trace": 1.5698038568935098
+  },
+  {
+    "activation_count": 21,
+    "excitability": 1.1591602774594854,
+    "fatigue": 1.7496013958539723e-9,
+    "id": 350,
+    "memory_trace": 1.5916027745948533
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.156980385689351,
+    "fatigue": 1.7496013958539723e-9,
+    "id": 351,
+    "memory_trace": 1.5698038568935098
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1589831493878022,
+    "fatigue": 1.8416856798462867e-9,
+    "id": 352,
+    "memory_trace": 1.5898314938780231
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.1567667875605854,
+    "fatigue": 1.9386165051013546e-9,
+    "id": 353,
+    "memory_trace": 1.5676678756058542
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.1598446231944055,
+    "fatigue": 2.1480515291981773e-9,
+    "id": 354,
+    "memory_trace": 1.5984462319440538
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.1598451796692348,
+    "fatigue": 2.3801124977265126e-9,
+    "id": 355,
+    "memory_trace": 1.5984517966923488
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1635193015915781,
+    "fatigue": 2.63724376479392e-9,
+    "id": 356,
+    "memory_trace": 1.6351930159157808
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1669446515753028,
+    "fatigue": 3.075951322109836e-9,
+    "id": 357,
+    "memory_trace": 1.6694465157530283
+  },
+  {
+    "activation_count": 18,
+    "excitability": 1.1569373810924777,
+    "fatigue": 3.5876382237758696e-9,
+    "id": 358,
+    "memory_trace": 1.5693738109247757
+  },
+  {
+    "activation_count": 16,
+    "excitability": 1.123674403869846,
+    "fatigue": 3.776461288185126e-9,
+    "id": 359,
+    "memory_trace": 1.2367440386984603
+  },
+  {
+    "activation_count": 15,
+    "excitability": 1.1131519154568488,
+    "fatigue": 4.88053027047481e-9,
+    "id": 360,
+    "memory_trace": 1.1315191545684886
+  },
+  {
+    "activation_count": 18,
+    "excitability": 1.146097725262264,
+    "fatigue": 4.404678569103515e-9,
+    "id": 361,
+    "memory_trace": 1.4609772526226386
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.1599603838881472,
+    "fatigue": 4.184444640648339e-9,
+    "id": 362,
+    "memory_trace": 1.5996038388814706
+  },
+  {
+    "activation_count": 18,
+    "excitability": 1.1569373810924777,
+    "fatigue": 3.5876382237758696e-9,
+    "id": 363,
+    "memory_trace": 1.5693738109247757
+  },
+  {
+    "activation_count": 18,
+    "excitability": 1.1520773834557652,
+    "fatigue": 3.075951322109836e-9,
+    "id": 364,
+    "memory_trace": 1.5207738345576505
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.1522398827249833,
+    "fatigue": 2.63724376479392e-9,
+    "id": 365,
+    "memory_trace": 1.522398827249833
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.153441375539113,
+    "fatigue": 2.505381576554224e-9,
+    "id": 366,
+    "memory_trace": 1.5344137553911297
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.1584892730482759,
+    "fatigue": 2.3801124977265126e-9,
+    "id": 367,
+    "memory_trace": 1.5848927304827596
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1589340548610543,
+    "fatigue": 2.261106872840187e-9,
+    "id": 368,
+    "memory_trace": 1.589340548610542
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.155624775065379,
+    "fatigue": 2.1480515291981773e-9,
+    "id": 369,
+    "memory_trace": 1.5562477506537888
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1567057708242117,
+    "fatigue": 2.1480515291981773e-9,
+    "id": 370,
+    "memory_trace": 1.5670577082421175
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.155624775065379,
+    "fatigue": 2.1480515291981773e-9,
+    "id": 371,
+    "memory_trace": 1.5562477506537888
+  },
+  {
+    "activation_count": 20,
+    "excitability": 1.1589340548610543,
+    "fatigue": 2.261106872840187e-9,
+    "id": 372,
+    "memory_trace": 1.589340548610542
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.1584892730482759,
+    "fatigue": 2.3801124977265126e-9,
+    "id": 373,
+    "memory_trace": 1.5848927304827596
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.153441375539113,
+    "fatigue": 2.505381576554224e-9,
+    "id": 374,
+    "memory_trace": 1.5344137553911297
+  },
+  {
+    "activation_count": 19,
+    "excitability": 1.1522398827249833,
+    "fatigue": 2.63724376479392e-9,
+    "id": 375,
+    "memory_trace": 1.522398827249833
+  },
+  {
+    "activation_count": 18,
+    "excitability": 1.1520773834557652,
+    "fatigue": 3.075951322109836e-9,
+    "id": 376,
+    "memory_trace": 1.5207738345576505
+  },
+  {
+    "activation_count": 18,
+    "excitability": 1.1569373810924777,
+    "fatigue": 3.5876382237758696e-9,
+    "id": 377,
+    "memory_trace": 1.5693738109247757
+  },
+  {
+    "activation_count": 18,
+    "excitability": 1.1460179786631843,
+    "fatigue": 3.776461288185126e-9,
+    "id": 378,
+    "memory_trace": 1.4601797866318422
+  },
+  {
+    "activation_count": 16,
+    "excitability": 1.1174151846729266,
+    "fatigue": 4.184444640648339e-9,
+    "id": 379,
+    "memory_trace": 1.174151846729265
+  },
+  {
+    "activation_count": 11,
+    "excitability": 1.066829552633302,
+    "fatigue": 3.5543564425817547e-9,
+    "id": 380,
+    "memory_trace": 0.6682955263330206
+  },
+  {
+    "activation_count": 15,
+    "excitability": 1.116994005281327,
+    "fatigue": 4.88053027047481e-9,
+    "id": 381,
+    "memory_trace": 1.1699400528132708
+  },
+  {
+    "activation_count": 17,
+    "excitability": 1.1282298368468773,
+    "fatigue": 4.404678569103515e-9,
+    "id": 382,
+    "memory_trace": 1.2822983684687725
+  },
+  {
+    "activation_count": 16,
+    "excitability": 1.123674405091171,
+    "fatigue": 3.776461288185126e-9,
+    "id": 383,
+    "memory_trace": 1.2367440509117094
+  },
+  {
+    "activation_count": 16,
+    "excitability": 1.1161922387767784,
+    "fatigue": 3.237843496957722e-9,
+    "id": 384,
+    "memory_trace": 1.1619223877677833
+  },
+  {
+    "activation_count": 16,
+    "excitability": 1.1200155423417604,
+    "fatigue": 2.922153756004344e-9,
+    "id": 385,
+    "memory_trace": 1.200155423417604
+  },
+  {
+    "activation_count": 16,
+    "excitability": 1.1189399589981166,
+    "fatigue": 2.63724376479392e-9,
+    "id": 386,
+    "memory_trace": 1.1893995899811671
+  },
+  {
+    "activation_count": 16,
+    "excitability": 1.1232575498966297,
+    "fatigue": 2.505381576554224e-9,
+    "id": 387,
+    "memory_trace": 1.2325754989662967
+  },
+  {
+    "activation_count": 17,
+    "excitability": 1.123738754306434,
+    "fatigue": 2.3801124977265126e-9,
+    "id": 388,
+    "memory_trace": 1.2373875430643408
+  },
+  {
+    "activation_count": 17,
+    "excitability": 1.128728357667377,
+    "fatigue": 2.261106872840187e-9,
+    "id": 389,
+    "memory_trace": 1.2872835766737698
+  },
+  {
+    "activation_count": 17,
+    "excitability": 1.1202282707227844,
+    "fatigue": 2.1480515291981773e-9,
+    "id": 390,
+    "memory_trace": 1.2022827072278448
+  },
+  {
+    "activation_count": 17,
+    "excitability": 1.128728357667377,
+    "fatigue": 2.261106872840187e-9,
+    "id": 391,
+    "memory_trace": 1.2872835766737698
+  },
+  {
+    "activation_count": 17,
+    "excitability": 1.123738754306434,
+    "fatigue": 2.3801124977265126e-9,
+    "id": 392,
+    "memory_trace": 1.2373875430643408
+  },
+  {
+    "activation_count": 16,
+    "excitability": 1.1232575498966297,
+    "fatigue": 2.505381576554224e-9,
+    "id": 393,
+    "memory_trace": 1.2325754989662967
+  },
+  {
+    "activation_count": 16,
+    "excitability": 1.1189399589981166,
+    "fatigue": 2.63724376479392e-9,
+    "id": 394,
+    "memory_trace": 1.189399589981167
+  },
+  {
+    "activation_count": 16,
+    "excitability": 1.1200155423417604,
+    "fatigue": 2.922153756004344e-9,
+    "id": 395,
+    "memory_trace": 1.200155423417604
+  },
+  {
+    "activation_count": 16,
+    "excitability": 1.1161922387767784,
+    "fatigue": 3.237843496957722e-9,
+    "id": 396,
+    "memory_trace": 1.1619223877677833
+  },
+  {
+    "activation_count": 16,
+    "excitability": 1.123674403869846,
+    "fatigue": 3.776461288185126e-9,
+    "id": 397,
+    "memory_trace": 1.2367440386984603
+  },
+  {
+    "activation_count": 16,
+    "excitability": 1.1174151846729266,
+    "fatigue": 4.184444640648339e-9,
+    "id": 398,
+    "memory_trace": 1.174151846729265
+  },
+  {
+    "activation_count": 11,
+    "excitability": 1.0687292632770746,
+    "fatigue": 3.1618526208057466e-9,
+    "id": 399,
+    "memory_trace": 0.6872926327707457
+  }
+]

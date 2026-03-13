@@ -1,0 +1,9 @@
+[package]
+name = "stretch-cli"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+stretch-core = { path = "../stretch-core" }
+serde_json = "1"
+toml = "0.8"

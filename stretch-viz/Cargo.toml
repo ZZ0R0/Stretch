@@ -1,0 +1,9 @@
+[package]
+name = "stretch-viz"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+stretch-core = { path = "../stretch-core" }
+macroquad = "0.4"
+toml = "0.8"

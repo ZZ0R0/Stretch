@@ -1,0 +1,67 @@
+# Configuration Stretch V0 — Expérience de base
+
+[domain]
+topology = "grid2d"
+size = 20
+avg_neighbors = 6
+seed = 42
+
+[node_defaults]
+activation = 0.0
+threshold = 0.3
+fatigue = 0.0
+memory_trace = 0.0
+excitability = 1.0
+inhibition = 0.0
+
+[edge_defaults]
+conductance = 1.0
+plasticity = 1.0
+decay = 0.01
+conductance_min = 0.1
+conductance_max = 5.0
+
+[propagation]
+kernel = "exponential"
+spatial_decay = 0.8
+gain = 0.4
+
+[plasticity]
+reinforcement_rate = 0.01
+weakening_rate = 0.002
+coactivation_threshold = 0.2
+coactivity_decay = 0.05
+
+[dissipation]
+activation_decay = 0.25
+fatigue_gain = 0.15
+fatigue_recovery = 0.05
+inhibition_gain = 0.08
+inhibition_decay = 0.03
+trace_decay = 0.005
+trace_gain = 0.1
+
+[simulation]
+total_ticks = 500
+snapshot_interval = 10
+seed = 42
+
+# === Stimuli ===
+# Stimulus unique au centre de la grille 20x20 (nœud 210)
+
+[[stimuli]]
+node = 210
+start_tick = 10
+end_tick = 15
+intensity = 1.5
+repeat_interval = 0
+
+# === Expérience d'entraînement répétitif ===
+# Décommenter pour tester la plasticité :
+
+# [[stimuli]]
+# node = 210
+# start_tick = 50
+# end_tick = 300
+# intensity = 0.8
+# repeat_interval = 20

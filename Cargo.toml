@@ -1,0 +1,3 @@
+[workspace]
+members = ["stretch-core", "stretch-cli", "stretch-viz"]
+resolver = "2"
