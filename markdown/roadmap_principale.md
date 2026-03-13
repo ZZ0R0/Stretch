@@ -1,22 +1,26 @@
-# Roadmap principale — révision à partir de V3
-## Substrat cognitif spatio-temporel
+# Roadmap principale — révision post-V3
+## Versioning sans versions intermédiaires
 
-## 1. Objet
+## 1. Objet du document
 
-Ce document met à jour la roadmap à partir de **V3** en tenant compte de :
+Ce document remplace la version précédente de la roadmap post-V3 avec une règle explicite :
 
-- la roadmap actuelle ;
-- les aboutissements réels de la V2 ;
-- les instabilités et limites identifiées après V2 ;
-- la vision post-V2.
+> **aucune version intermédiaire de type V3.x, V4.x, etc.**
 
-Les versions **V0**, **V1** et **V2** sont considérées comme acquises et ne constituent plus le centre de la planification.
+Lorsqu’un palier technique supplémentaire est nécessaire pour valider de nouvelles briques, on :
+- **élargit la version supérieure** ;
+- ou **on crée directement une version majeure suivante**.
 
-L’objectif de cette révision est de remplacer une progression trop directe par une progression **plus réaliste**, **plus sûre**, et **mieux séquencée** vers un agent textuel émergent.
+Les validations partielles deviennent donc :
+- des **gates** ;
+- des **jalons internes** ;
+- des **sous-phases de travail**,
+
+mais **jamais** des numéros de version intermédiaires.
 
 ---
 
-## 2. Base acquise avant V3
+## 2. Base considérée comme acquise
 
 ### V0 — substrat dynamique minimal
 - propagation locale ;
@@ -28,498 +32,353 @@ L’objectif de cette révision est de remplacer une progression trop directe pa
 ### V1 — substrat spatial 3D non-grid
 - graphe spatial 3D ;
 - topologies KNN / radius ;
-- indexation KD-tree ;
+- KD-tree ;
 - calibration 3D ;
 - visualisation 3D ;
 - formalisation mathématique complète.
 
 ### V2 — activité endogène régulée
-- partitionnement spatial en zones ;
-- régulation PID ;
+- partitionnement spatial ;
+- PID ;
 - pacemakers ;
 - consolidation mémoire structurelle ;
-- activité auto-entretenue ;
-- fonctionnement stable à 50k nœuds.
+- activité auto-entretenue.
+
+### V3 — transition vers des dynamiques internes
+- neurones excitateurs / inhibiteurs ;
+- propagation signée ;
+- PID indirect ;
+- STDP ;
+- budget synaptique compétitif ;
+- passage à 500k nœuds sur CPU parallèle ;
+- substrat moins homogène et plus auto-organisé.
 
 ---
 
-## 3. Réalité technique après V2
+## 3. Diagnostic post-V3
 
-La V2 a résolu le blocage fondamental de V1 : l’absence d’activité endogène.  
-Le système possède désormais un fond d’activité stable, des oscillations imposées et une mémoire structurelle durable. Cela constitue une avancée décisive. Cependant, la V2 a aussi révélé des verrous qui empêchent toute montée réaliste vers des comportements cognitifs riches.
+La V3 a validé un vrai saut qualitatif, mais elle laisse ouverts plusieurs verrous structurants :
 
-### 3.1 Limites désormais avérées
+- oscillations émergentes encore à confirmer strictement ;
+- consolidation encore trop rapide sous fort fond d’activité ;
+- STDP encore trop symétrique ;
+- absence de dopamine ;
+- absence de récompense ;
+- absence de traces d’éligibilité ;
+- absence d’interface d’entrée et de sortie ;
+- absence de hiérarchie régionale ;
+- différenciation neuronale encore limitée ;
+- distance encore importante avant une symbolisation ou une boucle textuelle.
 
-- la consolidation n’est pas sélective et tend à se généraliser à presque tout le graphe ;
-- l’activité maintenue par le PID est trop homogène spatialement ;
-- le PID reste trop direct et court-circuite la propagation autonome ;
-- les oscillations sont encore imposées par les pacemakers, non émergentes ;
-- il n’existe pas encore d’inhibition inter-neuronale ;
-- la plasticité reste corrélative et non causale ;
-- il n’existe ni assemblées compétitives, ni mémoire de travail, ni apprentissage séquentiel ;
-- la scalabilité temps réel reste limitée par le CPU.
+La conséquence principale est simple :
+
+> la suite du projet est plus difficile que prévu initialement
+
+et la roadmap doit être allongée.
 
 ---
 
-## 4. Conséquence sur la roadmap
+## 4. Nouvelle règle de progression
 
-La roadmap précédente était trop compacte à partir de V3.  
-Elle supposait que l’on pourrait enchaîner presque directement :
-
-- hiérarchie régionale ;
-- spécialisation neuronale ;
-- mémoire multi-système ;
-- assemblées ;
-- symbolisation ;
-- agent textuel.
-
-Les résultats V2 montrent que ce saut est trop ambitieux.  
-Il faut insérer des paliers supplémentaires pour résoudre d’abord :
-
-1. la compétition ;
-2. la causalité temporelle ;
-3. l’auto-entretien par propagation ;
-4. la sélectivité de la mémoire ;
-5. la montée en échelle.
-
-La roadmap corrigée devient donc :
+La roadmap ne doit plus être pensée comme une chaîne trop compacte du type :
 
 ```text
-V0  substrat dynamique minimal
-V1  espace 3D non-grid
-V2  régulation locale et activité endogène
-
-V3  inhibition, STDP, PID indirect
-V4  sélectivité mémoire et compétition locale
-V5  hiérarchie de zones et régulation multi-échelle
-V6  spécialisation neuronale riche
-V7  mémoire multi-système
-V8  assemblées dynamiques et mémoire de travail
-V9  chaînage, séquences et proto-raisonnement
-V10 symbolisation et interface discrète
-V11 agent textuel émergent minimal
+compétition → hiérarchie → mémoire → assemblées → symboles → texte
 ```
 
-La V8 n’est donc plus l’objectif terminal de numérotation.
+mais comme une montée par blocs mieux ordonnés :
+
+```text
+V3 acquis
+→ V4 dopamine / reward / éligibilité / I/O minimales
+→ V5 mémoire guidée et compétition réelle
+→ V6 hiérarchie de zones
+→ V7 spécialisation riche
+→ V8 assemblées et mémoire de travail
+→ V9 séquences et prédiction
+→ V10 symbolisation
+→ V11 boucle linguistique externe minimale
+→ V12 agent textuel émergent minimal
+```
 
 ---
 
-# 5. V3 — Inhibition, STDP, PID indirect
+## 5. Nouvelle roadmap à partir de V4
 
-## 5.1 Intention
+```text
+V0   substrat dynamique minimal                    acquis
+V1   espace 3D non-grid                            acquis
+V2   régulation locale et activité endogène        acquis
+V3   inhibition, STDP, PID indirect                acquis / consolidé
 
-Transformer la V2 d’un système **régulé depuis l’extérieur du graphe** en un système dont la dynamique commence à émerger des interactions entre types neuronaux.
-
-La V3 est la vraie transition entre :
-- **activité maintenue par contrôle**
-et
-- **activité maintenue par structure interne**.
-
-## 5.2 Objectifs
-
-- introduire l’inhibition inter-neuronale ;
-- rendre la plasticité temporellement causale ;
-- transformer le PID en mécanisme indirect ;
-- réduire l’homogénéité spatiale ;
-- faire émerger les premières oscillations non purement imposées.
-
-## 5.3 Transformations majeures
-
-### A. Neurones inhibiteurs
-Ajout d’une proportion contrôlée de neurones inhibiteurs, cible initiale ~20%.
-
-Effets attendus :
-- contraste spatial ;
-- compétition locale ;
-- prémices de winner-take-all ;
-- base des oscillations E/I émergentes.
-
-### B. PID indirect
-Le PID ne doit plus injecter directement dans `activation`.
-
-Il doit ajuster localement :
-- le seuil ;
-- le gain de propagation ;
-- l’excitabilité ;
-- éventuellement le budget énergétique de zone.
-
-Le réseau doit redevenir responsable de sa propre activité.
-
-### C. STDP
-Remplacement ou extension de la plasticité corrélative par une plasticité dépendante du timing.
-
-Effets attendus :
-- causalité directionnelle ;
-- apprentissage de séquences ;
-- différenciation de A→B et B→A.
-
-### D. Pacemakers adoucis
-Les pacemakers deviennent des outils de guidage ou d’amorçage, pas la source principale d’oscillation.
-
-### E. Première sélectivité mémoire
-Début de normalisation hebbienne / budget sortant / consolidation compétitive.
-
-## 5.4 Ce qui doit être livré
-
-- neurones excitateurs / inhibiteurs ;
-- STDP opérationnelle ;
-- PID indirect configurable ;
-- benchmarks comparaison PID direct vs indirect ;
-- premiers tests d’oscillations émergentes sans pacemaker.
-
-## 5.5 Critères d’acceptation
-
-- au moins une forme d’oscillation émergente observable sans pacemaker ;
-- premières compétitions locales reproductibles ;
-- apprentissage directionnel mesurable sur séquences simples ;
-- baisse sensible de la consolidation de masse ;
-- activité auto-entretenue conservée malgré la réduction du rôle du PID.
-
-## 5.6 Protocoles à produire
-
-- cahier des charges V3 ;
-- protocole E/I ;
-- protocole STDP ;
-- protocole PID indirect ;
-- protocole oscillations émergentes ;
-- benchmark CPU/GPU ciblé sur propagation + STDP.
+V4   dopamine, reward, éligibilité, I/O minimales
+V5   mémoire sélective guidée + compétition locale réelle
+V6   hiérarchie de zones et régulation multi-échelle
+V7   spécialisation neuronale riche et canaux multiples
+V8   assemblées dynamiques et mémoire de travail
+V9   chaînage, prédiction temporelle et proto-raisonnement
+V10  symbolisation et interface discrète
+V11  boucle linguistique externe minimale
+V12  agent textuel émergent minimal
+```
 
 ---
 
-# 6. V4 — Sélectivité mémoire et compétition locale
+# 6. V4 — Dopamine, reward, éligibilité, entrées/sorties minimales
 
 ## 6.1 Intention
 
-Stabiliser ce que la V3 aura ouvert :  
-la compétition, la mémoire sélective et le contraste spatial.
+La V4 doit faire franchir au projet un cap fondamental :
 
-Cette version existe parce que la V2 a montré que la mémoire structurelle peut devenir non informative si elle n’est pas rendue compétitive.
+passer d’un substrat auto-organisé à un substrat qui peut commencer à apprendre **en fonction d’un objectif**.
+
+La V4 absorbe aussi les validations post-V3 qui auraient sinon donné lieu à une pseudo-version intermédiaire.
 
 ## 6.2 Objectifs
 
-- empêcher la consolidation de masse ;
-- imposer une vraie compétition entre connexions ;
-- faire émerger des motifs localisés ;
-- préparer les futures assemblées.
+- finaliser les points ouverts de stabilité post-V3 dans le cadre de la V4 ;
+- introduire un canal dopaminergique minimal ;
+- introduire un reward externe simple ;
+- introduire des traces d’éligibilité ;
+- introduire une entrée minimale structurée ;
+- introduire une sortie minimale interprétable.
 
 ## 6.3 Transformations majeures
 
-### A. Normalisation synaptique
-Exemples possibles :
-- budget de conductance sortant par nœud ;
-- normalisation par ligne ;
-- quota de connexions consolidables ;
-- seuils adaptatifs de consolidation.
+### A. Stabilisation post-V3 intégrée à la V4
+La V4 doit inclure, comme prérequis internes :
+- validation ou réfutation propre des oscillations émergentes ;
+- recalibration E/I si nécessaire ;
+- STDP asymétrique si la V3 symétrique est insuffisante ;
+- réduction supplémentaire de la consolidation parasite.
 
-### B. Gating de la plasticité
-La plasticité structurelle et la consolidation ne doivent plus dépendre du simple fond d’activité.
+### B. Voies dopaminergiques minimales
+- niveau tonique ;
+- bursts ;
+- dips ;
+- modulation de la STDP ;
+- gating de consolidation.
 
-On introduit :
-- seuils événementiels ;
-- fenêtres de plasticité ;
-- gating par intensité locale ;
-- éventuellement modulation locale.
+### C. Traces d’éligibilité
+- trace locale par arête ;
+- décroissance temporelle ;
+- couplage eligibility × reward.
 
-### C. Inhibition latérale
-Développement du contraste et de la sélection.
+### D. Entrée minimale
+- sous-graphe d’entrée ;
+- patterns simples ;
+- séparation nette entre données externes et fond interne.
 
-### D. Détection de motifs localisés
-Instrumentation dédiée pour distinguer :
-- activité de fond ;
-- événements structurants ;
-- motifs réellement appris.
+### E. Sortie minimale
+- sous-graphe de sortie ;
+- lecture de décision simple ;
+- readout comportemental élémentaire.
 
-## 6.4 Ce qui doit être livré
+## 6.4 Ce que la V4 doit prouver
 
-- mécanisme de consolidation compétitive ;
-- normalisation synaptique ;
-- métriques de sparsité fonctionnelle ;
-- cartes de motifs et chemins réellement sélectionnés.
+- le reward modifie réellement ce qui est appris ;
+- l’entrée n’est plus une simple injection arbitraire ;
+- la sortie est interprétable ;
+- la plasticité devient partiellement guidée ;
+- les derniers doutes majeurs post-V3 sont levés ou tranchés dans le cadre de la V4.
 
 ## 6.5 Critères d’acceptation
 
-- la mémoire structurelle reste limitée à une fraction informative du graphe ;
-- les motifs appris sont localisés ;
-- plusieurs patterns stimulés simultanément n’aboutissent plus à une simple superposition ;
-- les premiers effets winner-take-all partiels sont visibles.
-
-## 6.6 Protocoles à produire
-
-- cahier des charges V4 ;
-- protocole de sélectivité mémoire ;
-- protocole de compétition locale ;
-- protocole d’ablation inhibition ;
-- benchmark de stabilité mémoire sur longues fenêtres.
+- STDP seule vs STDP+reward produit des apprentissages différents ;
+- deux patterns d’entrée distincts mènent à deux réponses distinctes ;
+- une tâche simple obtient une performance au-dessus du hasard ;
+- la dopamine module l’apprentissage sans devenir un nouveau PID masqué ;
+- les oscillations émergentes ont été soit validées, soit proprement reclassées comme non nécessaires pour la suite immédiate.
 
 ---
 
-# 7. V5 — Hiérarchie de zones et régulation multi-échelle
+# 7. V5 — Mémoire sélective guidée et compétition locale réelle
 
 ## 7.1 Intention
 
-Après avoir réintroduit des dynamiques locales crédibles, il devient pertinent de reconstruire une organisation macroscopique.
-
-La hiérarchie régionale ne doit plus être une simple partition statique pilotée par PID direct, mais une architecture multi-échelle compatible avec les dynamiques internes.
+Après introduction de reward et d’éligibilité, la mémoire doit devenir réellement **sélective et utile**.
 
 ## 7.2 Objectifs
 
-- introduire des niveaux micro / méso / macro ;
-- passer d’un partitionnement figé à une organisation plus fonctionnelle ;
-- différencier des régions par consignes, budgets, rythmes et rôles.
+- consolider en fonction de la valeur ;
+- rendre la compétition locale réellement discriminante ;
+- limiter fortement la mémoire parasite ;
+- raffiner la STDP asymétrique.
 
 ## 7.3 Transformations majeures
 
-### A. Zones hiérarchiques
-- micro-zones : dynamique locale ;
-- méso-zones : coordination intermédiaire ;
-- macro-zones : état global, allocation énergétique, rythmes dominants.
+- consolidation sous reward ;
+- gating événementiel ;
+- seuils adaptatifs de consolidation ;
+- compétition locale renforcée ;
+- winner-take-all local plus robuste ;
+- sélection des motifs utiles.
 
-### B. Consignes différenciées
-Chaque zone n’a plus forcément la même activité cible.
+## 7.4 Ce que doit prouver la V5
 
-### C. Budgets métaboliques
-Introduction de coûts et de contraintes par région.
-
-### D. Régulation multi-échelle
-Le contrôle global agit sur les paramètres de zones, pas sur l’activation brute.
-
-### E. Possibilité de re-partitionnement
-Au moins partiel, au fil de l’activité.
-
-## 7.4 Ce qui doit être livré
-
-- structure de zones hiérarchiques ;
-- régulation multi-échelle ;
-- métriques de spécialisation régionale ;
-- instrumentation micro/méso/macro.
+- le système n’apprend plus seulement ce qui est fréquent ;
+- il apprend davantage ce qui est pertinent ou récompensé ;
+- la mémoire devient plus rare, plus informative, plus stable.
 
 ## 7.5 Critères d’acceptation
 
-- des régions montrent durablement des comportements différents ;
-- la hiérarchie améliore la stabilité et la lisibilité des motifs ;
-- les zones ne sont plus simplement isofonctionnelles ;
-- le système supporte des rythmes locaux et globaux simultanés.
-
-## 7.6 Protocoles à produire
-
-- cahier des charges V5 ;
-- protocole de hiérarchie régionale ;
-- protocole budgets métaboliques ;
-- protocole de re-partitionnement ;
-- benchmark de coût hiérarchique.
+- baisse nette de la consolidation parasite ;
+- motifs gagnants plus localisés ;
+- amélioration mesurable sur tâche récompensée ;
+- stabilité globale conservée.
 
 ---
 
-# 8. V6 — Spécialisation neuronale riche
+# 8. V6 — Hiérarchie de zones et régulation multi-échelle
 
 ## 8.1 Intention
 
-Une fois inhibition, STDP, compétition et hiérarchie en place, le système peut enfin supporter une véritable différenciation neuronale utile.
+Reconstruire l’architecture régionale sur une base désormais orientée vers l’apprentissage et la valeur.
 
 ## 8.2 Objectifs
 
-- introduire plusieurs familles de neurones non redondantes ;
-- faire émerger des rôles fonctionnels distincts ;
-- préparer les mémoires spécialisées.
+- micro / méso / macro-zones ;
+- contrôle multi-échelle ;
+- budgets régionaux ;
+- modulation descendante ;
+- répartition fonctionnelle plus claire.
 
-## 8.3 Types cibles
+## 8.3 Transformations majeures
 
-Exemples de familles :
-- excitateurs ;
-- inhibiteurs ;
-- relais rapides ;
-- intégrateurs lents ;
-- neurones mémoire ;
-- neurones de contrôle ;
-- neurones oscillatoires ;
-- neurones d’action / sortie.
+- zones hiérarchiques ;
+- métriques régionales ;
+- modulation top-down ;
+- contraintes énergétiques ;
+- re-partitionnement partiel si nécessaire.
 
-## 8.4 Transformations majeures
+## 8.4 Ce que doit prouver la V6
 
-Chaque famille peut différer selon :
-- constantes de temps ;
-- fatigue ;
-- inhibition ;
-- trace ;
-- plasticité ;
-- sensibilité au contrôle régional ;
-- connectivité privilégiée.
+- certaines zones intègrent ;
+- certaines relaient ;
+- certaines arbitrent ;
+- la hiérarchie améliore stabilité et lisibilité.
 
-## 8.5 Ce qui doit être livré
+## 8.5 Critères d’acceptation
 
-- système de types riche ;
-- matrice de compatibilité inter-types ;
-- instrumentation fonctionnelle par type ;
-- ablations de type.
-
-## 8.6 Critères d’acceptation
-
-- les types ont des rôles mesurables ;
-- certaines régions s’enrichissent naturellement en certains types ;
-- la diversité neuronale améliore la qualité des dynamiques ;
-- les premiers circuits spécialisés apparaissent.
-
-## 8.7 Protocoles à produire
-
-- cahier des charges V6 ;
-- protocole de validation par type ;
-- protocole de spécialisation régionale ;
-- protocole d’ablation multi-types.
+- rôles régionaux mesurables ;
+- coordination multi-zones ;
+- spécialisation régionale visible ;
+- compatibilité avec reward et I/O.
 
 ---
 
-# 9. V7 — Mémoire multi-système
+# 9. V7 — Spécialisation neuronale riche et canaux multiples
 
 ## 9.1 Intention
 
-Passer d’une mémoire essentiellement structurelle à plusieurs régimes de mémoire distincts.
+Passer d’une différenciation principalement E/I à une diversité neuronale réellement fonctionnelle.
 
 ## 9.2 Objectifs
 
-- mémoire de travail ;
-- mémoire consolidée ;
-- mémoire procédurale ;
-- replay ;
-- oubli utile.
+- enrichir `NeuronType` ;
+- introduire plusieurs constantes de temps et rôles ;
+- ajouter au moins un canal modulateur supplémentaire si nécessaire ;
+- préparer mémoire de travail et assemblées.
 
 ## 9.3 Transformations majeures
 
-### A. Mémoire de travail
-Maintien temporaire d’un pattern spécifique sans stimulus permanent.
+Familles possibles :
+- relais rapides ;
+- intégrateurs lents ;
+- neurones mémoire ;
+- oscillatoires ;
+- sortie ;
+- interneurones rapides/lents.
 
-### B. Mémoire long terme
-Chemins consolidés mais sélectifs.
+Canaux possibles :
+- dopamine ;
+- saillance / attention ;
+- modulation lente tonique.
 
-### C. Mémoire procédurale
-Séquences causales consolidées via STDP.
+## 9.4 Ce que doit prouver la V7
 
-### D. Replay
-Réactivation spontanée ou quasi-spontanée de patterns appris.
-
-### E. Oubli utile
-Éviter la saturation mémorielle.
-
-## 9.4 Ce qui doit être livré
-
-- architecture mémoire multi-système ;
-- scheduler actif/repos/replay ;
-- métriques de rappel différé ;
-- métriques de maintien temporaire.
+- la diversité neuronale améliore réellement le système ;
+- certaines fonctions deviennent dépendantes de certains types ;
+- la complexité ajoutée reste contrôlable.
 
 ## 9.5 Critères d’acceptation
 
-- un pattern peut être maintenu temporairement puis oublié ;
-- des séquences apprises peuvent être rappelées ;
-- des réactivations de replay sont observables ;
-- la mémoire reste sélective et non triviale.
-
-## 9.6 Protocoles à produire
-
-- cahier des charges V7 ;
-- protocole mémoire de travail ;
-- protocole replay ;
-- protocole mémoire procédurale ;
-- protocole oubli.
+- ablations parlantes ;
+- spécialisation régionale accrue ;
+- gains mesurables sur mémoire, stabilité ou décision.
 
 ---
 
-# 10. V8 — Assemblées dynamiques
+# 10. V8 — Assemblées dynamiques et mémoire de travail
 
 ## 10.1 Intention
 
-À ce stade, le système ne doit plus seulement propager et mémoriser, mais former des **assemblées** identifiables et manipulables.
+Faire émerger des groupes fonctionnels identifiables, réactivables et compétitifs.
 
 ## 10.2 Objectifs
 
-- faire émerger des assemblées stables ou méta-stables ;
-- permettre la compétition entre assemblées ;
-- rendre possibles l’activation, la dissolution et la réactivation d’assemblées.
+- formation d’assemblées ;
+- maintien temporaire ;
+- dissolution ;
+- réactivation partielle ;
+- mémoire de travail active.
 
 ## 10.3 Transformations majeures
 
-### A. Détection d’assemblées
-Outils et métriques pour identifier les ensembles co-actifs.
+- détection d’assemblées ;
+- maintien récurrent ;
+- inhibition inter-assemblées ;
+- replay local ;
+- compétitions entre motifs.
 
-### B. Maintien et dissolution
-Règles permettant à une assemblée de persister un temps donné puis de s’éteindre.
+## 10.4 Ce que doit prouver la V8
 
-### C. Compétition entre assemblées
-Winner-take-all partiel, inhibition latérale, arbitrage.
-
-### D. Réactivation
-Une assemblée partiellement stimulée doit pouvoir se réactiver comme motif.
-
-## 10.4 Ce qui doit être livré
-
-- moteur d’assemblées ;
-- instrumentation de motifs ;
-- mesures de stabilité d’assemblée ;
-- tests de réactivation partielle.
+- un motif peut être maintenu après le stimulus ;
+- un motif partiel peut rappeler le motif complet ;
+- plusieurs assemblées peuvent entrer en compétition.
 
 ## 10.5 Critères d’acceptation
 
-- au moins une assemblée méta-stable est détectable et reproductible ;
-- deux assemblées concurrentes n’aboutissent pas toujours à la coexistence ;
-- un motif partiel peut parfois rappeler l’assemblée complète ;
-- les assemblées ne sont pas des artefacts de visualisation mais des structures mesurées.
-
-## 10.6 Protocoles à produire
-
-- cahier des charges V8 ;
-- protocole d’assemblées ;
-- protocole de compétition d’assemblées ;
-- protocole de réactivation partielle.
+- assemblées détectables ;
+- mémoire de travail > quelques dizaines de ticks ;
+- réactivation partielle mesurable ;
+- winner-take-all non trivial.
 
 ---
 
-# 11. V9 — Chaînage, séquences et proto-raisonnement
+# 11. V9 — Chaînage, prédiction temporelle et proto-raisonnement
 
 ## 11.1 Intention
 
-Une fois les assemblées établies, on peut tenter leur enchaînement et leur manipulation.
+Passer des assemblées à leurs transitions.
 
 ## 11.2 Objectifs
 
-- faire suivre une assemblée par une autre ;
-- apprendre des transitions ;
-- commencer à maintenir un état interne opératoire ;
-- introduire une forme de proto-raisonnement séquentiel.
+- apprendre A→B→C ;
+- produire des prédictions temporelles ;
+- maintenir un contexte interne court ;
+- tester des boucles d’évaluation simples.
 
 ## 11.3 Transformations majeures
 
-### A. Chaînage d’assemblées
-Assemblage A → Assemblage B → Assemblage C.
+- transitions entre assemblées ;
+- chaînage ;
+- prédiction ;
+- erreurs locales de prédiction ;
+- premiers scénarios séquentiels.
 
-### B. Sélection de transition
-Quand plusieurs suites sont possibles, le système doit arbitrer.
+## 11.4 Ce que doit prouver la V9
 
-### C. État interne opératoire
-Maintien d’un contexte très simple pendant quelques étapes.
-
-### D. Premières boucles d’évaluation
-Tester une suite, comparer le résultat à une attente simple, corriger.
-
-## 11.4 Ce qui doit être livré
-
-- moteur de transitions entre assemblées ;
-- mesure de succès séquentiel ;
-- instrumentation des chaînes internes ;
-- premiers scénarios de proto-résolution.
+- séquences rejouables ;
+- alternatives départageables ;
+- contexte simple conservé ;
+- début de proto-raisonnement séquentiel.
 
 ## 11.5 Critères d’acceptation
 
-- une séquence apprise peut être rejouée sans stimulus complet ;
-- des alternatives concurrentes peuvent être départagées ;
-- un contexte local peut être maintenu sur plusieurs étapes ;
-- les erreurs séquentielles sont mesurables.
-
-## 11.6 Protocoles à produire
-
-- cahier des charges V9 ;
-- protocole de séquences ;
-- protocole de chaînage ;
-- protocole de contexte interne ;
-- protocole de proto-raisonnement.
+- réussite sur chaînes simples ;
+- prédiction meilleure que le hasard ;
+- stabilité séquentielle multi-run.
 
 ---
 
@@ -527,185 +386,178 @@ Tester une suite, comparer le résultat à une attente simple, corriger.
 
 ## 12.1 Intention
 
-Il serait trop optimiste de brancher directement un agent textuel après les assemblées.  
-Il faut d’abord une couche de représentation discrète exploitable.
+Avant le texte, il faut une couche de représentations discrètes manipulables.
 
 ## 12.2 Objectifs
 
-- associer des assemblées ou séquences à des unités discrètes ;
 - construire un petit vocabulaire interne ;
-- permettre une interface entrée/sortie discrète simple.
+- associer motifs / assemblées / chaînes à des unités discrètes ;
+- manipuler de petites entrées / sorties discrètes.
 
 ## 12.3 Transformations majeures
 
-### A. Tokenisation interne
-Motifs récurrents → symboles internes.
-
-### B. Dictionnaire de motifs
-Catalogage et réidentification des motifs.
-
-### C. Entrées discrètes
-Petits alphabets, labels, classes, suites simples.
-
-### D. Sorties discrètes
-Décodage motif → symbole.
-
-## 12.4 Ce qui doit être livré
-
-- couche de symbolisation minimale ;
+- tokenisation interne ;
 - dictionnaire de motifs ;
-- encodeur/décodeur expérimental ;
-- tests de séquences symboliques simples.
+- encodeur/décodeur discret ;
+- catégorisation élémentaire.
+
+## 12.4 Ce que doit prouver la V10
+
+- existence de symboles internes stables ;
+- relations simples entre symboles ;
+- readout discret fiable.
 
 ## 12.5 Critères d’acceptation
 
-- le système peut manipuler un petit ensemble de symboles internes ;
-- il peut apprendre quelques relations discrètes simples ;
-- l’interface discrète n’est pas plaquée artificiellement sans correspondance interne.
-
-## 12.6 Protocoles à produire
-
-- cahier des charges V10 ;
-- protocole de symbolisation ;
-- protocole d’I/O discrète ;
-- protocole de rappel symbolique.
+- quelques symboles robustes ;
+- rappel symbolique simple ;
+- transitions symboliques simples réussies.
 
 ---
 
-# 13. V11 — Agent textuel émergent minimal
+# 13. V11 — Boucle linguistique externe minimale
 
 ## 13.1 Intention
 
-Ce n’est qu’ici qu’il devient réaliste de viser un premier agent textuel, et encore à un niveau modeste.
+Séparer la symbolisation interne de la première interface linguistique externe.
 
 ## 13.2 Objectifs
 
-- micro-conversation ;
-- contexte local court ;
-- rappel très récent ;
-- patrons textuels simples ;
-- réponses brèves cohérentes.
+- entrée texte très limitée ;
+- sortie texte rudimentaire ;
+- mapping texte ↔ symboles internes ;
+- micro-contexte.
 
 ## 13.3 Transformations majeures
 
-### A. Entrée texte minimale
-Mapping texte simple → symboles internes → assemblées.
+- dictionnaire externe minimal ;
+- tokenisation textuelle simple ;
+- boucle d’échange très contrainte.
 
-### B. État conversationnel court
-Maintien du sujet récent, très local.
+## 13.4 Ce que doit prouver la V11
 
-### C. Sélection de réponse
-À partir d’assemblées/symboles/chaînes.
-
-### D. Décodage texte
-Assemblées → symboles → sortie textuelle.
-
-## 13.4 Ce qui doit être livré
-
-- boucle textuelle minimale ;
-- protocole de conversation courte ;
-- protocole de rappel immédiat ;
-- mesure de cohérence locale.
+- lien réel entre texte externe et états internes ;
+- réponses sur petit vocabulaire ;
+- conservation du sujet immédiat.
 
 ## 13.5 Critères d’acceptation
 
-- le système peut tenir de micro-échanges simples ;
-- il maintient un contexte court ;
-- il rappelle une information très récente ;
-- il apprend quelques patrons conversationnels locaux.
-
-## 13.6 Protocoles à produire
-
-- cahier des charges V11 ;
-- protocole de conversation courte ;
-- protocole de cohérence locale ;
-- protocole d’apprentissage de patrons textuels.
+- micro-échanges simples ;
+- rappel immédiat ;
+- cohérence locale rudimentaire.
 
 ---
 
-## 14. Sprint transversal conseillé — Accélération GPU
+# 14. V12 — Agent textuel émergent minimal
 
-Le besoin de passage à l’échelle devient crédible à partir de V3 et critique à partir de V5/V6.
+## 14.1 Intention
 
-Je recommande de traiter l’accélération comme un **sprint transversal**, pas comme une version cognitive autonome.
+Construire un premier agent textuel de très bas niveau à partir des briques précédentes.
+
+## 14.2 Objectifs
+
+- mini-conversation ;
+- petite mémoire récente ;
+- patrons textuels appris ;
+- comportement local orienté but.
+
+## 14.3 Ce que doit prouver la V12
+
+- plusieurs tours très courts ;
+- maintien d’une consigne locale ;
+- rappel très récent ;
+- comportement supérieur à un simple réflexe direct.
+
+## 14.4 Critères d’acceptation
+
+- mini-dialogues simples ;
+- cohérence locale sur quelques tours ;
+- apprentissage incrémental de patrons.
+
+---
+
+## 15. Sprint transversal — Accélération GPU
+
+L’accélération GPU reste un sujet transversal.
 
 ### Déclenchement conseillé
-Entre V3 et V5, selon la charge réelle :
-- si la STDP + inhibition + hiérarchie rendent le CPU trop lent ;
-- si l’on veut viser 500k–1M nœuds.
+- dès V4 si reward + I/O + éligibilité rendent les sweeps trop lents ;
+- impératif au plus tard entre V5 et V7 si la cible reste ≥500k nœuds avec instrumentation riche.
 
-### Portée
+### Portée cible
 - propagation ;
-- mises à jour locales ;
 - STDP ;
+- traces d’éligibilité ;
 - métriques bulk ;
-- éventuellement gestion de zones hiérarchiques.
-
-Le GPU ne doit pas devenir le cœur conceptuel de la roadmap, mais un accélérateur de viabilité expérimentale.
+- rendu instancié ;
+- certains calculs hiérarchiques si utile.
 
 ---
 
-## 15. Gates expérimentaux
+## 16. Gates expérimentaux corrigés
 
-Trois gates doivent être assumés pour éviter une roadmap irréaliste.
-
-### Gate A — fin V3
-Sans inhibition + STDP + PID indirect fonctionnels, il ne faut pas poursuivre vers les mémoires supérieures.
+### Gate A — fin V4
+Pas de poursuite si :
+- reward n’influe pas réellement sur l’apprentissage ;
+- entrée/sortie minimales restent arbitraires ;
+- points ouverts post-V3 non tranchés rendent les résultats ambigus.
 
 ### Gate B — fin V8
-Sans assemblées stables, compétitives et réactivables, il ne faut pas prétendre à une symbolisation crédible.
+Pas de poursuite symbolique si :
+- pas d’assemblées stables ;
+- pas de mémoire de travail exploitable ;
+- pas de réactivation partielle crédible.
 
 ### Gate C — fin V10
-Sans symboles internes minimaux réellement manipulables, il ne faut pas lancer un agent textuel.
+Pas de boucle textuelle si :
+- les symboles internes sont trop instables ;
+- le readout discret est artificiel ou non réutilisable.
 
 ---
 
-## 16. Ordre de priorité réel
+## 17. Priorité réelle
 
-Si l’on doit avancer vite mais correctement, l’ordre des urgences devient :
+L’ordre stratégique corrigé devient :
 
-1. **V3** — inhibition, STDP, PID indirect ;
-2. **V4** — sélectivité mémoire et compétition locale ;
-3. **V5** — hiérarchie de zones ;
-4. **V6** — spécialisation neuronale ;
-5. **V7** — mémoire multi-système ;
-6. **V8** — assemblées dynamiques ;
-7. **V9** — séquences et proto-raisonnement ;
-8. **V10** — symbolisation ;
-9. **V11** — agent textuel minimal.
+1. **V4** — dopamine, reward, éligibilité, I/O minimales ;
+2. **V5** — mémoire guidée et compétition réelle ;
+3. **V6** — hiérarchie de zones ;
+4. **V7** — spécialisation riche ;
+5. **V8** — assemblées et mémoire de travail ;
+6. **V9** — séquences et prédiction ;
+7. **V10** — symbolisation ;
+8. **V11** — boucle linguistique externe ;
+9. **V12** — agent textuel minimal.
 
 ---
 
-## 17. Conclusion
+## 18. Conclusion
 
-La V2 a rendu le projet viable.  
-Mais elle a aussi montré que la suite était **plus difficile que prévu**.
+La correction post-V3 change fortement la suite du projet.
 
-La bonne correction de la roadmap n’est donc pas d’ajouter quelques sous-points :  
-c’est de reconnaître qu’il faut désormais distinguer clairement :
+Le projet a maintenant besoin, beaucoup plus tôt que prévu, de :
 
-- **auto-régulation**
-- **compétition**
-- **causalité temporelle**
-- **hiérarchie**
-- **spécialisation**
-- **mémoire**
-- **assemblées**
-- **symbolisation**
-- **texte**
+- **dopamine**
+- **reward**
+- **éligibilité**
+- **entrée**
+- **sortie**
 
-La feuille de route corrigée à partir de V3 est donc :
+et ces briques doivent être absorbées directement par **V4**, sans créer de version intermédiaire.
+
+La roadmap corrigée devient donc :
 
 ```text
-V3  inhibition, STDP, PID indirect
-V4  sélectivité mémoire et compétition locale
-V5  hiérarchie de zones et régulation multi-échelle
-V6  spécialisation neuronale riche
-V7  mémoire multi-système
-V8  assemblées dynamiques
-V9  chaînage, séquences et proto-raisonnement
-V10 symbolisation et interface discrète
-V11 agent textuel émergent minimal
+V4   dopamine, reward, éligibilité, I/O minimales
+V5   mémoire sélective guidée + compétition locale réelle
+V6   hiérarchie de zones et régulation multi-échelle
+V7   spécialisation neuronale riche et canaux multiples
+V8   assemblées dynamiques et mémoire de travail
+V9   chaînage, prédiction temporelle et proto-raisonnement
+V10  symbolisation et interface discrète
+V11  boucle linguistique externe minimale
+V12  agent textuel émergent minimal
 ```
 
-C’est une trajectoire plus longue, mais beaucoup plus réaliste.
+Cette version respecte la contrainte de versioning :
+**pas de V3.x, pas de versions intermédiaires, uniquement des versions supérieures.**

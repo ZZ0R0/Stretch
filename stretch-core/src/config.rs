@@ -1,5 +1,10 @@
 use serde::{Deserialize, Serialize};
 
+use crate::dopamine::DopamineConfig;
+use crate::input::InputConfig;
+use crate::output::OutputConfig;
+use crate::reward::RewardConfig;
+
 /// Configuration complète du système V3.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SimConfig {
@@ -30,6 +35,21 @@ pub struct SimConfig {
     /// V3 : budget synaptique (normalisation)
     #[serde(default)]
     pub synaptic_budget: SynapticBudgetConfig,
+    /// V4 : dopamine
+    #[serde(default)]
+    pub dopamine: DopamineConfig,
+    /// V4 : récompense
+    #[serde(default)]
+    pub reward: RewardConfig,
+    /// V4 : éligibilité
+    #[serde(default)]
+    pub eligibility: EligibilityConfig,
+    /// V4 : interface d'entrée
+    #[serde(default)]
+    pub input: InputConfig,
+    /// V4 : interface de sortie
+    #[serde(default)]
+    pub output: OutputConfig,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -150,9 +170,6 @@ pub struct StimulusConfig {
 /// V2 : Configuration des zones de contrôle
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ZoneConfig {
-    /// Activer le système de zones (false = mode V1 rétro-compatible)
-    #[serde(default)]
-    pub enabled: bool,
     /// Nombre de zones (neurones de contrôle)
     #[serde(default = "default_num_zones")]
     pub num_zones: usize,
@@ -191,7 +208,6 @@ pub struct ZoneConfig {
 impl Default for ZoneConfig {
     fn default() -> Self {
         ZoneConfig {
-            enabled: false,
             num_zones: 8,
             partition_method: "voronoi".into(),
             target_activity: 0.3,
@@ -210,9 +226,6 @@ impl Default for ZoneConfig {
 /// V2 : Configuration de consolidation mémoire
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConsolidationConfig {
-    /// Activer la consolidation
-    #[serde(default)]
-    pub enabled: bool,
     /// Seuil de conductance pour démarrer la consolidation
     #[serde(default = "default_consolidation_threshold")]
     pub threshold: f64,
@@ -224,7 +237,6 @@ pub struct ConsolidationConfig {
 impl Default for ConsolidationConfig {
     fn default() -> Self {
         ConsolidationConfig {
-            enabled: false,
             threshold: 2.5,
             ticks_required: 50,
         }
@@ -274,12 +286,32 @@ fn default_stdp_a_minus() -> f64 { 0.005 }
 fn default_stdp_tau_plus() -> f64 { 20.0 }
 fn default_stdp_tau_minus() -> f64 { 20.0 }
 fn default_synaptic_budget() -> f64 { 30.0 }
+fn default_eligibility_decay() -> f64 { 0.95 }
+fn default_eligibility_max() -> f64 { 5.0 }
+
+/// V4 : Traces d'éligibilité
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EligibilityConfig {
+    /// Taux de décroissance (gamma_e) : e_ij *= decay chaque tick
+    #[serde(default = "default_eligibility_decay")]
+    pub decay: f64,
+    /// Plafond de la trace d'éligibilité
+    #[serde(default = "default_eligibility_max")]
+    pub max: f64,
+}
+
+impl Default for EligibilityConfig {
+    fn default() -> Self {
+        EligibilityConfig {
+            decay: default_eligibility_decay(),
+            max: default_eligibility_max(),
+        }
+    }
+}
 
 /// V3 : Configuration des types neuronaux E/I
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NeuronTypesConfig {
-    #[serde(default)]
-    pub enabled: bool,
     #[serde(default = "default_inhibitory_fraction")]
     pub inhibitory_fraction: f64,
 }
@@ -287,7 +319,6 @@ pub struct NeuronTypesConfig {
 impl Default for NeuronTypesConfig {
     fn default() -> Self {
         NeuronTypesConfig {
-            enabled: false,
             inhibitory_fraction: 0.2,
         }
     }
@@ -296,8 +327,6 @@ impl Default for NeuronTypesConfig {
 /// V3 : Configuration STDP
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StdpConfig {
-    #[serde(default)]
-    pub enabled: bool,
     #[serde(default = "default_stdp_a_plus")]
     pub a_plus: f64,
     #[serde(default = "default_stdp_a_minus")]
@@ -311,7 +340,6 @@ pub struct StdpConfig {
 impl Default for StdpConfig {
     fn default() -> Self {
         StdpConfig {
-            enabled: false,
             a_plus: 0.005,
             a_minus: 0.005,
             tau_plus: 20.0,
@@ -323,17 +351,21 @@ impl Default for StdpConfig {
 /// V3 : Budget synaptique (normalisation des conductances sortantes)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SynapticBudgetConfig {
-    #[serde(default)]
-    pub enabled: bool,
     #[serde(default = "default_synaptic_budget")]
     pub budget: f64,
+    /// Intervalle (en ticks) entre les renormalisations du budget.
+    /// Plus grand = la plasticité reward a plus de temps pour s'exprimer.
+    #[serde(default = "default_budget_interval")]
+    pub interval: usize,
 }
+
+fn default_budget_interval() -> usize { 50 }
 
 impl Default for SynapticBudgetConfig {
     fn default() -> Self {
         SynapticBudgetConfig {
-            enabled: false,
             budget: 30.0,
+            interval: default_budget_interval(),
         }
     }
 }
@@ -426,6 +458,11 @@ impl Default for SimConfig {
             neuron_types: NeuronTypesConfig::default(),
             stdp: StdpConfig::default(),
             synaptic_budget: SynapticBudgetConfig::default(),
+            dopamine: DopamineConfig::default(),
+            reward: RewardConfig::default(),
+            eligibility: EligibilityConfig::default(),
+            input: InputConfig::default(),
+            output: OutputConfig::default(),
         }
     }
 }

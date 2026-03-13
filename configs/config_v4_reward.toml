@@ -1,0 +1,130 @@
+# Configuration V4 — Chemins dopaminergiques d'apprentissage
+# Règle des trois facteurs : STDP → éligibilité → dopamine × éligibilité → conductance
+# 50k nœuds pour itération rapide
+
+[domain]
+topology = "knn_3d"
+size = 50000
+k_neighbors = 10
+domain_extent = 100.0
+seed = 42
+
+[node_defaults]
+activation = 0.0
+threshold = 0.2
+fatigue = 0.0
+memory_trace = 0.0
+excitability = 1.0
+inhibition = 0.0
+
+[edge_defaults]
+conductance = 1.0
+plasticity = 1.0
+# decay sert maintenant de taux homéostatique : C → conductance (baseline) lentement
+decay = 0.0001
+conductance_min = 0.1
+conductance_max = 5.0
+
+[propagation]
+kernel = "exponential"
+spatial_decay = 0.3
+# G = 0.3 : sous-critique pour C=1 (I=0.14 < θ=0.2), super-critique pour C≥3 (I=0.42 > θ)
+gain = 0.8
+gain_inhibitory = 0.8
+
+[plasticity]
+# Non utilisé en V4 (Hebbian supprimé, remplacé par trois-facteurs)
+reinforcement_rate = 0.002
+weakening_rate = 0.0005
+coactivation_threshold = 0.2
+coactivity_decay = 0.05
+
+[dissipation]
+activation_decay = 0.25
+fatigue_gain = 0.20
+fatigue_recovery = 0.05
+inhibition_gain = 0.12
+inhibition_decay = 0.03
+trace_decay = 0.005
+trace_gain = 0.1
+activation_min = 0.01
+decay_jitter = 0.15
+
+[simulation]
+total_ticks = 5000
+snapshot_interval = 10
+seed = 42
+
+# V3 : Types neuronaux E/I
+[neuron_types]
+inhibitory_fraction = 0.2
+
+# V3 : Zones PID indirect — cible sparse pour permettre la discrimination par conductance
+[zones]
+num_zones = 8
+partition_method = "voronoi"
+# Activité sparse (~5% de nœuds actifs), crucial pour la discrimination par conductance
+target_activity = 0.3
+kp = 0.5
+ki = 0.05
+kd = 0.1
+pid_output_max = 2.0
+pid_integral_max = 5.0
+pid_mode = "indirect"
+k_theta = 0.3
+k_gain = 0.2
+
+# Consolidation mémoire — gatée par dopamine + éligibilité
+[consolidation]
+# Seuil élevé : seuls les chemins consistamment renforcés se consolident
+threshold = 4.0
+ticks_required = 50
+
+# V3 : STDP — calcule ψ (direction), NE modifie PAS la conductance directement
+[stdp]
+a_plus = 0.005
+a_minus = 0.005
+tau_plus = 20.0
+tau_minus = 20.0
+
+# Budget synaptique — DÉSACTIVÉ (remplacé par homéostasie + clamp conductance)
+[synaptic_budget]
+budget = 30.0
+
+# V4 : Dopamine — signal de surprise pour la règle des trois facteurs
+[dopamine]
+tonic = 0.1
+phasic_decay = 0.15
+reward_gain = 1.0
+# η dans ΔC = η × δ_d × e_ij — taux d'apprentissage trois-facteurs
+plasticity_gain = 2.0
+consolidation_threshold = 0.3
+phasic_max = 2.0
+spatial_lambda = 0.15
+
+# V4 : Récompense
+[reward]
+reward_positive = 1.0
+reward_negative = -0.5
+
+# V4 : Traces d'éligibilité — mémoire des événements STDP récents
+[eligibility]
+# γ = 0.95 → demi-vie ≈ 14 ticks
+decay = 0.85
+max = 5.0
+
+# V4 : Interface d'entrée (2 classes, 50 nœuds/classe, nœuds 0-99)
+[input]
+num_classes = 2
+group_size = 50
+start_node = 0
+intensity = 1.5
+
+# V4 : Interface de sortie (2 classes, 50 nœuds/classe, nœuds 500-599)
+[output]
+num_classes = 2
+group_size = 50
+start_node = 500
+read_delay = 10
+
+# Pas de stimuli classiques — l'injection se fait via l'input encoder

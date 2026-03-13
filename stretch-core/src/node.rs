@@ -53,8 +53,10 @@ impl Node {
     }
 
     /// Seuil effectif corrigé par fatigue, excitabilité, inhibition et modulation de zone.
+    /// Borné inférieurement à 0.01 pour éviter que le PID rende tous les nœuds actifs.
     pub fn effective_threshold(&self) -> f64 {
-        (self.threshold + self.fatigue + self.inhibition + self.threshold_mod) / self.excitability.max(0.01)
+        let raw = (self.threshold + self.fatigue + self.inhibition + self.threshold_mod) / self.excitability.max(0.01);
+        raw.max(0.05)
     }
 
     /// Le nœud est-il considéré comme "actif" ?

@@ -19,6 +19,8 @@ pub struct Edge {
     pub consolidation_counter: usize,
     /// V2 : l'arête est-elle consolidée (decay désactivé) ?
     pub consolidated: bool,
+    /// V4 : trace d'éligibilité pour l'apprentissage par récompense
+    pub eligibility: f64,
 }
 
 impl Edge {
@@ -32,6 +34,7 @@ impl Edge {
             usage_count: 0,
             consolidation_counter: 0,
             consolidated: false,
+            eligibility: 0.0,
         }
     }
 

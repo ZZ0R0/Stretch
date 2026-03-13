@@ -59,7 +59,7 @@ pub struct ZoneManager {
 impl ZoneManager {
     /// Construire les zones par partitionnement de Voronoï autour de centres choisis.
     pub fn from_config(config: &ZoneConfig, domain: &Domain) -> Self {
-        if !config.enabled || config.num_zones == 0 {
+        if config.num_zones == 0 {
             let n = domain.num_nodes();
             return ZoneManager {
                 zones: Vec::new(),

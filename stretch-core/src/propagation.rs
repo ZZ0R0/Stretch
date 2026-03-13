@@ -2,82 +2,79 @@ use rayon::prelude::*;
 
 use crate::config::PropagationConfig;
 use crate::domain::Domain;
-use crate::node::NeuronType;
 
-/// Calculer l'influence reçue par chaque nœud à ce tick (parallèle, target-centric).
-/// V3 : propagation signée — les neurones excitateurs propagent positivement,
-/// les neurones inhibiteurs propagent négativement (× gain_inhibitory).
-/// Utilise incoming_adjacency pour paralléliser par nœud cible sans contention.
-pub fn compute_influences(
+/// Compute source contributions into a pre-allocated buffer.
+/// Uses node_is_excitatory bitmap to avoid loading full Node struct for type check.
+pub fn compute_source_contribs(
     domain: &Domain,
     config: &PropagationConfig,
     gain_mods: &[f64],
-) -> Vec<f64> {
-    let is_exponential = config.kernel == "exponential";
-    let spatial_decay = config.spatial_decay;
+    buf: &mut Vec<f64>,
+) {
+    let n = domain.nodes.len();
+    buf.resize(n, 0.0);
 
-    // Pré-calculer la contribution de chaque source (activation × sign × gain_mod × gain)
-    // Cela évite de recalculer ces valeurs pour chaque arête sortante.
-    let source_contribs: Vec<f64> = domain
-        .nodes
-        .par_iter()
-        .enumerate()
-        .map(|(i, node)| {
-            if !node.is_active() {
-                return 0.0;
-            }
-            let sign = match node.node_type {
-                NeuronType::Excitatory => 1.0,
-                NeuronType::Inhibitory => -config.gain_inhibitory,
-            };
-            let gain_mod = 1.0 + gain_mods.get(i).copied().unwrap_or(0.0);
-            node.activation * sign * gain_mod * config.gain
-        })
-        .collect();
-
-    domain
-        .incoming_adjacency
-        .par_iter()
-        .map(|in_edges| {
-            let mut total = 0.0_f64;
-            for &edge_idx in in_edges {
-                let edge = &domain.edges[edge_idx];
-                let src = source_contribs[edge.from];
-                if src == 0.0 {
-                    continue;
-                }
-
-                let kernel_value = if is_exponential {
-                    (-spatial_decay * edge.distance).exp()
-                } else {
-                    (-0.5 * (edge.distance * spatial_decay).powi(2)).exp()
-                };
-
-                total += src * edge.conductance * kernel_value;
-            }
-            total
-        })
-        .collect()
+    buf.par_iter_mut().enumerate().for_each(|(i, out)| {
+        let node = &domain.nodes[i];
+        if !node.is_active() {
+            *out = 0.0;
+            return;
+        }
+        let sign = if domain.node_is_excitatory[i] {
+            1.0
+        } else {
+            -config.gain_inhibitory
+        };
+        let gain_mod = 1.0 + gain_mods.get(i).copied().unwrap_or(0.0);
+        *out = node.activation * sign * gain_mod * config.gain;
+    });
 }
 
-/// Appliquer les influences (parallèle) : mettre à jour l'activation des nœuds cibles.
-/// V3 : les influences négatives (inhibition) sont appliquées aussi.
-/// Retourne les indices des nœuds nouvellement activés.
-pub fn apply_influences(domain: &mut Domain, influences: &[f64]) -> Vec<usize> {
-    let newly_activated: Vec<usize> = domain
+/// Compute influences using CSR incoming adjacency + conductance cache + kernel weights.
+/// All hot data is contiguous or cache-friendly:
+///   - kernel_weights: sequential in CSR (co-located)
+///   - source_nodes: sequential in CSR (co-located)
+///   - conductances: 4.6MB separate cache (vs 55MB edge array)
+pub fn compute_influences_csr(
+    domain: &Domain,
+    source_contribs: &[f64],
+    influences_buf: &mut Vec<f64>,
+) {
+    let n = domain.nodes.len();
+    influences_buf.resize(n, 0.0);
+    let csr = &domain.incoming;
+    let conductances = &domain.conductances;
+
+    influences_buf
+        .par_iter_mut()
+        .enumerate()
+        .for_each(|(node_idx, out)| {
+            let start = csr.offsets[node_idx];
+            let end = csr.offsets[node_idx + 1];
+            let mut total = 0.0_f64;
+            for k in start..end {
+                let src = source_contribs[csr.source_nodes[k]];
+                if src == 0.0 { continue; }
+                total += src * conductances[csr.edge_indices[k]] * csr.kernel_weights[k];
+            }
+            *out = total;
+        });
+}
+
+/// Apply influences: update activation of target nodes.
+/// Returns count of newly activated nodes.
+pub fn apply_influences(domain: &mut Domain, influences: &[f64]) -> usize {
+    let count = std::sync::atomic::AtomicUsize::new(0);
+    domain
         .nodes
         .par_iter_mut()
         .enumerate()
-        .filter_map(|(i, node)| {
+        .for_each(|(i, node)| {
             let was_active = node.is_active();
             node.activation = (node.activation + influences[i]).clamp(0.0, 10.0);
             if !was_active && node.is_active() {
-                Some(i)
-            } else {
-                None
+                count.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
             }
-        })
-        .collect();
-
-    newly_activated
+        });
+    count.load(std::sync::atomic::Ordering::Relaxed)
 }

@@ -1,11 +1,15 @@
 pub mod config;
 pub mod domain;
+pub mod dopamine;
 pub mod edge;
+pub mod input;
 pub mod metrics;
 pub mod node;
+pub mod output;
 pub mod pacemaker;
-pub mod plasticity;
+pub mod perf;
 pub mod propagation;
+pub mod reward;
 pub mod simulation;
 pub mod stdp;
 pub mod stimulus;

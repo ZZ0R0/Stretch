@@ -36,6 +36,18 @@ pub struct TickMetrics {
     pub excitatory_energy: f64,
     /// V3 : énergie des nœuds inhibiteurs
     pub inhibitory_energy: f64,
+    /// V4 : récompense courante
+    pub current_reward: f64,
+    /// V4 : récompense cumulée
+    pub cumulative_reward: f64,
+    /// V4 : niveau de dopamine
+    pub dopamine_level: f64,
+    /// V4 : trace d'éligibilité moyenne
+    pub mean_eligibility: f64,
+    /// V4 : dernière décision de sortie (None = pas de readout)
+    pub output_decision: Option<usize>,
+    /// V4 : accuracy courante
+    pub accuracy: f64,
 }
 
 /// Collecte complète des métriques sur la simulation.
@@ -51,7 +63,16 @@ impl MetricsLog {
         }
     }
 
-    pub fn record(&mut self, tick: usize, domain: &Domain, zone_mgr: &ZoneManager) {
+    pub fn record(
+        &mut self,
+        tick: usize,
+        domain: &Domain,
+        zone_mgr: &ZoneManager,
+        cumulative_reward: f64,
+        dopamine_level: f64,
+        output_decision: Option<usize>,
+        accuracy: f64,
+    ) {
         let n_nodes = domain.nodes.len().max(1) as f64;
         let n_edges = domain.edges.len().max(1) as f64;
 
@@ -91,22 +112,23 @@ impl MetricsLog {
                 ),
             );
 
-        // Parallel fold/reduce sur les arêtes
-        let (sum_cond, max_conductance, consolidated_edges) = domain
+        // Parallel fold/reduce sur les arêtes (conductance + consolidation + éligibilité)
+        let (sum_cond, max_conductance, consolidated_edges, sum_eligibility) = domain
             .edges
             .par_iter()
             .fold(
-                || (0.0f64, 0.0f64, 0usize),
+                || (0.0f64, 0.0f64, 0usize, 0.0f64),
                 |mut acc, e| {
                     acc.0 += e.conductance;
                     if e.conductance > acc.1 { acc.1 = e.conductance; }
                     if e.consolidated { acc.2 += 1; }
+                    acc.3 += e.eligibility.abs();
                     acc
                 },
             )
             .reduce(
-                || (0.0, 0.0, 0),
-                |a, b| (a.0 + b.0, a.1.max(b.1), a.2 + b.2),
+                || (0.0, 0.0, 0, 0.0),
+                |a, b| (a.0 + b.0, a.1.max(b.1), a.2 + b.2, a.3 + b.3),
             );
 
         self.snapshots.push(TickMetrics {
@@ -128,6 +150,13 @@ impl MetricsLog {
             active_inhibitory,
             excitatory_energy,
             inhibitory_energy,
+            // V4
+            current_reward: 0.0,
+            cumulative_reward,
+            dopamine_level,
+            mean_eligibility: sum_eligibility / n_edges,
+            output_decision,
+            accuracy,
         });
     }
 

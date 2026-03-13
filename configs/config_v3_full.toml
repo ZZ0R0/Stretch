@@ -1,0 +1,113 @@
+# Configuration V3 — Full (toutes les fonctionnalités V3 activées)
+# E/I + PID indirect + STDP + Budget synaptique + Consolidation
+
+[domain]
+topology = "knn_3d"
+size = 50000
+k_neighbors = 10
+domain_extent = 200.0
+seed = 42
+
+[node_defaults]
+activation = 0.0
+threshold = 0.2
+fatigue = 0.0
+memory_trace = 0.0
+excitability = 1.0
+inhibition = 0.0
+
+[edge_defaults]
+conductance = 1.0
+plasticity = 1.0
+decay = 0.01
+conductance_min = 0.1
+conductance_max = 5.0
+
+[propagation]
+kernel = "exponential"
+spatial_decay = 0.15
+gain = 0.6
+gain_inhibitory = 0.8
+
+[plasticity]
+reinforcement_rate = 0.01
+weakening_rate = 0.002
+coactivation_threshold = 0.2
+coactivity_decay = 0.05
+
+[dissipation]
+activation_decay = 0.25
+fatigue_gain = 0.20
+fatigue_recovery = 0.05
+inhibition_gain = 0.12
+inhibition_decay = 0.03
+trace_decay = 0.005
+trace_gain = 0.1
+activation_min = 0.01
+decay_jitter = 0.15
+
+[simulation]
+total_ticks = 0
+snapshot_interval = 10
+seed = 42
+
+# V3 : Types neuronaux E/I
+[neuron_types]
+enabled = true
+inhibitory_fraction = 0.2
+
+# V3 : Zones PID indirect
+[zones]
+enabled = true
+num_zones = 8
+partition_method = "voronoi"
+target_activity = 0.3
+kp = 0.5
+ki = 0.05
+kd = 0.1
+pid_output_max = 2.0
+pid_integral_max = 5.0
+pid_mode = "indirect"
+k_theta = 0.3
+k_gain = 0.2
+
+# Consolidation mémoire
+[consolidation]
+enabled = true
+threshold = 2.5
+ticks_required = 50
+
+# V3 : STDP
+[stdp]
+enabled = true
+a_plus = 0.005
+a_minus = 0.005
+tau_plus = 20.0
+tau_minus = 20.0
+
+# V3 : Budget synaptique
+[synaptic_budget]
+enabled = true
+budget = 30.0
+
+# Stimulus initial (multiples foyers)
+[[stimuli]]
+node = 500
+start_tick = 10
+end_tick = 20
+intensity = 1.5
+repeat_interval = 0
+
+[[stimuli]]
+node = 5000
+start_tick = 10
+end_tick = 20
+intensity = 1.5
+repeat_interval = 0
+
+[[stimuli]]
+node = 25000
+start_tick = 30
+end_tick = 40
+intensity = 1.2
+repeat_interval = 0

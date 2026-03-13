@@ -79,8 +79,12 @@ impl VizState {
     fn new(config: SimConfig) -> Self {
         let is_grid = config.domain.topology == "grid2d";
         let grid_side = if is_grid { config.domain.size } else { 0 };
+        let mut sim = Simulation::new(config);
+        // V4 : configurer I/O spatial + trials
+        let n = sim.setup_v4_training();
+        eprintln!("[Viz V4] {} trials programmés", n);
         VizState {
-            sim: Simulation::new(config),
+            sim,
             paused: false,
             ticks_per_frame: 4,
             view_mode: ViewMode::Activation,
@@ -544,6 +548,25 @@ fn draw_sidebar(viz: &VizState) {
             let i_energy: f64 = nodes.iter().filter(|n| n.node_type == NeuronType::Inhibitory).map(|n| n.activation).sum();
             draw_label(&mut y, "Énergie E:", &format!("{:.2}", e_energy));
             draw_label(&mut y, "Énergie I:", &format!("{:.2}", i_energy));
+        }
+    }
+
+    // V4 : métriques dopamine et apprentissage
+    {
+        y += line_h * 0.5;
+        draw_text("--- V4 DOPAMINE ---", x, y, 16.0, YELLOW);
+        y += line_h * 1.2;
+        draw_label(&mut y, "Dopa. level:", &format!("{:.3}", viz.sim.dopamine_system.level));
+        draw_label(&mut y, "Trial:", &format!("{}/{}", viz.sim.current_trial, viz.sim.trials.len()));
+        if viz.sim.total_evaluated > 0 {
+            let acc = viz.sim.correct_count as f64 / viz.sim.total_evaluated as f64 * 100.0;
+            draw_label(&mut y, "Accuracy:", &format!("{:.1}% ({}/{})", acc, viz.sim.correct_count, viz.sim.total_evaluated));
+        }
+        if let Some(dec) = viz.sim.last_decision {
+            draw_label(&mut y, "Last decision:", &format!("{}", dec));
+        }
+        if let Some(tgt) = viz.sim.last_target {
+            draw_label(&mut y, "Last target:", &format!("{}", tgt));
         }
     }
 
