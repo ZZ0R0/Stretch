@@ -1,58 +1,83 @@
+use rayon::prelude::*;
+
 use crate::config::PropagationConfig;
 use crate::domain::Domain;
+use crate::node::NeuronType;
 
-/// Calculer l'influence reçue par chaque nœud à ce tick.
-/// Seuls les nœuds actifs (activation > seuil effectif) propagent.
-pub fn compute_influences(domain: &Domain, config: &PropagationConfig) -> Vec<f64> {
-    let n = domain.num_nodes();
-    let mut influences = vec![0.0_f64; n];
+/// Calculer l'influence reçue par chaque nœud à ce tick (parallèle, target-centric).
+/// V3 : propagation signée — les neurones excitateurs propagent positivement,
+/// les neurones inhibiteurs propagent négativement (× gain_inhibitory).
+/// Utilise incoming_adjacency pour paralléliser par nœud cible sans contention.
+pub fn compute_influences(
+    domain: &Domain,
+    config: &PropagationConfig,
+    gain_mods: &[f64],
+) -> Vec<f64> {
+    let is_exponential = config.kernel == "exponential";
+    let spatial_decay = config.spatial_decay;
 
-    for (i, adj_list) in domain.adjacency.iter().enumerate() {
-        let source = &domain.nodes[i];
-        if !source.is_active() {
-            continue;
-        }
-
-        for &edge_idx in adj_list {
-            let edge = &domain.edges[edge_idx];
-            let target_id = edge.to;
-
-            // Noyau de propagation : décroissance spatiale
-            let kernel_value = match config.kernel.as_str() {
-                "exponential" => (-config.spatial_decay * edge.distance).exp(),
-                "gaussian" => (-0.5 * (edge.distance * config.spatial_decay).powi(2)).exp(),
-                _ => (-config.spatial_decay * edge.distance).exp(),
+    // Pré-calculer la contribution de chaque source (activation × sign × gain_mod × gain)
+    // Cela évite de recalculer ces valeurs pour chaque arête sortante.
+    let source_contribs: Vec<f64> = domain
+        .nodes
+        .par_iter()
+        .enumerate()
+        .map(|(i, node)| {
+            if !node.is_active() {
+                return 0.0;
+            }
+            let sign = match node.node_type {
+                NeuronType::Excitatory => 1.0,
+                NeuronType::Inhibitory => -config.gain_inhibitory,
             };
+            let gain_mod = 1.0 + gain_mods.get(i).copied().unwrap_or(0.0);
+            node.activation * sign * gain_mod * config.gain
+        })
+        .collect();
 
-            // Influence = activation_source * conductance * noyau * gain
-            let influence = source.activation * edge.conductance * kernel_value * config.gain;
+    domain
+        .incoming_adjacency
+        .par_iter()
+        .map(|in_edges| {
+            let mut total = 0.0_f64;
+            for &edge_idx in in_edges {
+                let edge = &domain.edges[edge_idx];
+                let src = source_contribs[edge.from];
+                if src == 0.0 {
+                    continue;
+                }
 
-            influences[target_id] += influence;
-        }
-    }
+                let kernel_value = if is_exponential {
+                    (-spatial_decay * edge.distance).exp()
+                } else {
+                    (-0.5 * (edge.distance * spatial_decay).powi(2)).exp()
+                };
 
-    influences
+                total += src * edge.conductance * kernel_value;
+            }
+            total
+        })
+        .collect()
 }
 
-/// Appliquer les influences : mettre à jour l'activation des nœuds cibles.
+/// Appliquer les influences (parallèle) : mettre à jour l'activation des nœuds cibles.
+/// V3 : les influences négatives (inhibition) sont appliquées aussi.
 /// Retourne les indices des nœuds nouvellement activés.
 pub fn apply_influences(domain: &mut Domain, influences: &[f64]) -> Vec<usize> {
-    let mut newly_activated = Vec::new();
-
-    for i in 0..domain.nodes.len() {
-        let was_active = domain.nodes[i].is_active();
-        let influence = influences[i];
-
-        if influence > 0.0 {
-            domain.nodes[i].activation += influence;
-            // Bornage
-            domain.nodes[i].activation = domain.nodes[i].activation.min(10.0);
-        }
-
-        if !was_active && domain.nodes[i].is_active() {
-            newly_activated.push(i);
-        }
-    }
+    let newly_activated: Vec<usize> = domain
+        .nodes
+        .par_iter_mut()
+        .enumerate()
+        .filter_map(|(i, node)| {
+            let was_active = node.is_active();
+            node.activation = (node.activation + influences[i]).clamp(0.0, 10.0);
+            if !was_active && node.is_active() {
+                Some(i)
+            } else {
+                None
+            }
+        })
+        .collect();
 
     newly_activated
 }

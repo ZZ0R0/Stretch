@@ -1,7 +1,9 @@
+use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use crate::domain::Domain;
+use crate::node::NeuronType;
 use crate::zone::ZoneManager;
 
 /// Snapshot des métriques à un instant donné.
@@ -26,6 +28,14 @@ pub struct TickMetrics {
     pub mean_pid_output: f64,
     /// V2 : activité moyenne des zones
     pub zone_activity_mean: f64,
+    /// V3 : nombre de nœuds excitateurs actifs
+    pub active_excitatory: usize,
+    /// V3 : nombre de nœuds inhibiteurs actifs
+    pub active_inhibitory: usize,
+    /// V3 : énergie des nœuds excitateurs
+    pub excitatory_energy: f64,
+    /// V3 : énergie des nœuds inhibiteurs
+    pub inhibitory_energy: f64,
 }
 
 /// Collecte complète des métriques sur la simulation.
@@ -42,49 +52,82 @@ impl MetricsLog {
     }
 
     pub fn record(&mut self, tick: usize, domain: &Domain, zone_mgr: &ZoneManager) {
-        let active_nodes = domain.nodes.iter().filter(|n| n.is_active()).count();
-        let global_energy: f64 = domain.nodes.iter().map(|n| n.activation).sum();
-        let max_activation = domain
-            .nodes
-            .iter()
-            .map(|n| n.activation)
-            .fold(0.0_f64, f64::max);
-
-        let n_edges = domain.edges.len().max(1) as f64;
-        let mean_conductance: f64 = domain.edges.iter().map(|e| e.conductance).sum::<f64>() / n_edges;
-        let max_conductance = domain
-            .edges
-            .iter()
-            .map(|e| e.conductance)
-            .fold(0.0_f64, f64::max);
-
         let n_nodes = domain.nodes.len().max(1) as f64;
-        let mean_memory_trace: f64 =
-            domain.nodes.iter().map(|n| n.memory_trace).sum::<f64>() / n_nodes;
-        let max_memory_trace = domain
-            .nodes
-            .iter()
-            .map(|n| n.memory_trace)
-            .fold(0.0_f64, f64::max);
-        let mean_fatigue: f64 = domain.nodes.iter().map(|n| n.fatigue).sum::<f64>() / n_nodes;
+        let n_edges = domain.edges.len().max(1) as f64;
 
-        let consolidated_edges = domain.edges.iter().filter(|e| e.consolidated).count();
+        // Parallel fold/reduce sur les nœuds
+        let (active_nodes, global_energy, max_activation, sum_trace, max_trace, sum_fatigue,
+             active_excitatory, active_inhibitory, excitatory_energy, inhibitory_energy) = domain
+            .nodes
+            .par_iter()
+            .fold(
+                || (0usize, 0.0f64, 0.0f64, 0.0f64, 0.0f64, 0.0f64, 0usize, 0usize, 0.0f64, 0.0f64),
+                |mut acc, node| {
+                    let active = node.is_active();
+                    if active { acc.0 += 1; }
+                    acc.1 += node.activation;
+                    if node.activation > acc.2 { acc.2 = node.activation; }
+                    acc.3 += node.memory_trace;
+                    if node.memory_trace > acc.4 { acc.4 = node.memory_trace; }
+                    acc.5 += node.fatigue;
+                    match node.node_type {
+                        NeuronType::Excitatory => {
+                            acc.8 += node.activation;
+                            if active { acc.6 += 1; }
+                        }
+                        NeuronType::Inhibitory => {
+                            acc.9 += node.activation;
+                            if active { acc.7 += 1; }
+                        }
+                    }
+                    acc
+                },
+            )
+            .reduce(
+                || (0, 0.0, 0.0, 0.0, 0.0, 0.0, 0, 0, 0.0, 0.0),
+                |a, b| (
+                    a.0 + b.0, a.1 + b.1, a.2.max(b.2), a.3 + b.3, a.4.max(b.4),
+                    a.5 + b.5, a.6 + b.6, a.7 + b.7, a.8 + b.8, a.9 + b.9,
+                ),
+            );
+
+        // Parallel fold/reduce sur les arêtes
+        let (sum_cond, max_conductance, consolidated_edges) = domain
+            .edges
+            .par_iter()
+            .fold(
+                || (0.0f64, 0.0f64, 0usize),
+                |mut acc, e| {
+                    acc.0 += e.conductance;
+                    if e.conductance > acc.1 { acc.1 = e.conductance; }
+                    if e.consolidated { acc.2 += 1; }
+                    acc
+                },
+            )
+            .reduce(
+                || (0.0, 0.0, 0),
+                |a, b| (a.0 + b.0, a.1.max(b.1), a.2 + b.2),
+            );
 
         self.snapshots.push(TickMetrics {
             tick,
             active_nodes,
             global_energy,
             max_activation,
-            mean_conductance,
+            mean_conductance: sum_cond / n_edges,
             max_conductance,
-            mean_memory_trace,
-            max_memory_trace,
-            mean_fatigue,
+            mean_memory_trace: sum_trace / n_nodes,
+            max_memory_trace: max_trace,
+            mean_fatigue: sum_fatigue / n_nodes,
             consolidated_edges,
             num_zones: zone_mgr.num_zones(),
             mean_pid_error: zone_mgr.mean_pid_error(),
             mean_pid_output: zone_mgr.mean_pid_output(),
             zone_activity_mean: zone_mgr.global_activity_mean(),
+            active_excitatory,
+            active_inhibitory,
+            excitatory_energy,
+            inhibitory_energy,
         });
     }
 

@@ -1,6 +1,7 @@
 use macroquad::prelude::*;
 
 use stretch_core::config::SimConfig;
+use stretch_core::node::NeuronType;
 use stretch_core::simulation::Simulation;
 
 // ---------------------------------------------------------------------------
@@ -80,8 +81,8 @@ impl VizState {
         let grid_side = if is_grid { config.domain.size } else { 0 };
         VizState {
             sim: Simulation::new(config),
-            paused: true,
-            ticks_per_frame: 1,
+            paused: false,
+            ticks_per_frame: 4,
             view_mode: ViewMode::Activation,
             is_grid,
             grid_side,
@@ -97,7 +98,7 @@ impl VizState {
 // ---------------------------------------------------------------------------
 fn window_conf() -> Conf {
     Conf {
-        window_title: "Stretch V2 — Visualisation 3D".to_string(),
+        window_title: "Stretch V3 — Visualisation 3D".to_string(),
         window_width: 1280,
         window_height: 900,
         window_resizable: true,
@@ -407,11 +408,22 @@ fn draw_points_3d(viz: &VizState) {
         let sy = oy + (py - min_y) * scale;
         let normalized = (values[i] / max_val) as f32;
         let color = if normalized < 0.01 {
-            Color::new(0.15, 0.15, 0.18, 1.0) // faint for inactive
+            // V3 : faint color for inactive — purple tint for inhibitory
+            if viz.sim.domain.nodes[i].node_type == NeuronType::Inhibitory {
+                Color::new(0.18, 0.10, 0.22, 1.0)
+            } else {
+                Color::new(0.15, 0.15, 0.18, 1.0)
+            }
+        } else if viz.sim.domain.nodes[i].node_type == NeuronType::Inhibitory {
+            // V3 : inhibitory nodes use a cool blue-purple palette
+            let t = normalized.clamp(0.0, 1.0);
+            Color::new(0.3 * t, 0.1 * t, 0.6 + 0.4 * t, 1.0)
         } else {
             heat_color(normalized)
         };
-        draw_circle(sx, sy, point_r, color);
+        // Utiliser des rectangles au lieu de cercles pour 5x moins de vertices (perf)
+        let d = point_r * 2.0;
+        draw_rectangle(sx - point_r, sy - point_r, d, d, color);
     }
 
     // Légende
@@ -512,6 +524,27 @@ fn draw_sidebar(viz: &VizState) {
         draw_label(&mut y, "Act. moy.:", &format!("{:.4}", zm.global_activity_mean()));
         draw_label(&mut y, "Err. PID:", &format!("{:.4}", zm.mean_pid_error()));
         draw_label(&mut y, "Out. PID:", &format!("{:.4}", zm.mean_pid_output()));
+        let pid_mode = &viz.sim.config.zones.pid_mode;
+        draw_label(&mut y, "Mode PID:", pid_mode);
+    }
+
+    // V3 : métriques E/I
+    {
+        let exc_count = nodes.iter().filter(|n| n.node_type == NeuronType::Excitatory).count();
+        let inh_count = nodes.iter().filter(|n| n.node_type == NeuronType::Inhibitory).count();
+        if inh_count > 0 {
+            y += line_h * 0.5;
+            draw_text("--- E/I ---", x, y, 16.0, YELLOW);
+            y += line_h * 1.2;
+            let active_e = nodes.iter().filter(|n| n.node_type == NeuronType::Excitatory && n.is_active()).count();
+            let active_i = nodes.iter().filter(|n| n.node_type == NeuronType::Inhibitory && n.is_active()).count();
+            draw_label(&mut y, "Excit. (actifs):", &format!("{} ({})", exc_count, active_e));
+            draw_label(&mut y, "Inhib. (actifs):", &format!("{} ({})", inh_count, active_i));
+            let e_energy: f64 = nodes.iter().filter(|n| n.node_type == NeuronType::Excitatory).map(|n| n.activation).sum();
+            let i_energy: f64 = nodes.iter().filter(|n| n.node_type == NeuronType::Inhibitory).map(|n| n.activation).sum();
+            draw_label(&mut y, "Énergie E:", &format!("{:.2}", e_energy));
+            draw_label(&mut y, "Énergie I:", &format!("{:.2}", i_energy));
+        }
     }
 
     y += line_h * 1.5;

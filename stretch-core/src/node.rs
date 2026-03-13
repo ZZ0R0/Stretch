@@ -2,6 +2,13 @@ use serde::{Deserialize, Serialize};
 
 use crate::config::NodeDefaults;
 
+/// V3 : Type de neurone
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum NeuronType {
+    Excitatory,
+    Inhibitory,
+}
+
 /// État complet d'un nœud du système.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Node {
@@ -20,6 +27,12 @@ pub struct Node {
     pub inhibition: f64,
     /// Compteur d'activations (instrumentation)
     pub activation_count: u64,
+    /// V3 : type de neurone (E/I)
+    pub node_type: NeuronType,
+    /// V3 : dernier tick où le nœud était actif (pour STDP)
+    pub last_activation_tick: Option<usize>,
+    /// V3 : modulation du seuil par le PID indirect de zone
+    pub threshold_mod: f64,
 }
 
 impl Node {
@@ -33,12 +46,15 @@ impl Node {
             excitability: defaults.excitability,
             inhibition: defaults.inhibition,
             activation_count: 0,
+            node_type: NeuronType::Excitatory,
+            last_activation_tick: None,
+            threshold_mod: 0.0,
         }
     }
 
-    /// Seuil effectif corrigé par fatigue, excitabilité et inhibition.
+    /// Seuil effectif corrigé par fatigue, excitabilité, inhibition et modulation de zone.
     pub fn effective_threshold(&self) -> f64 {
-        (self.threshold + self.fatigue + self.inhibition) / self.excitability.max(0.01)
+        (self.threshold + self.fatigue + self.inhibition + self.threshold_mod) / self.excitability.max(0.01)
     }
 
     /// Le nœud est-il considéré comme "actif" ?

@@ -7,5 +7,6 @@ pub mod pacemaker;
 pub mod plasticity;
 pub mod propagation;
 pub mod simulation;
+pub mod stdp;
 pub mod stimulus;
 pub mod zone;

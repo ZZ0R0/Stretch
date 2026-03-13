@@ -2,7 +2,7 @@
 
 [domain]
 topology = "knn_3d"
-size = 50000
+size = 5000000
 k_neighbors = 10
 domain_extent = 200.0
 seed = 42

@@ -1,7 +1,10 @@
+use rayon::prelude::*;
+
 use crate::config::ZoneConfig;
 use crate::domain::Domain;
 
-/// V2 : Zone de contrôle — un groupe de nœuds régulé par un contrôleur PID.
+/// V3 : Zone de contrôle — un groupe de nœuds régulé par un contrôleur PID.
+/// Supporte le mode "direct" (V2 : injection d'activation) et "indirect" (V3 : modulation θ/gain).
 #[derive(Debug, Clone)]
 pub struct Zone {
     /// Index du neurone de contrôle (position dans `positions`)
@@ -20,6 +23,10 @@ pub struct Zone {
     pub error_prev: f64,
     /// PID : dernière sortie calculée
     pub output: f64,
+    /// V3 : modulation du seuil (PID indirect)
+    pub theta_mod: f64,
+    /// V3 : modulation du gain (PID indirect)
+    pub gain_mod: f64,
 }
 
 impl Zone {
@@ -33,21 +40,32 @@ impl Zone {
             integral: 0.0,
             error_prev: 0.0,
             output: 0.0,
+            theta_mod: 0.0,
+            gain_mod: 0.0,
         }
     }
 }
 
-/// Gestionnaire de zones V2.
+/// Gestionnaire de zones V3.
 #[derive(Debug, Clone)]
 pub struct ZoneManager {
     pub zones: Vec<Zone>,
+    /// V3 : assignation nœud → zone (index dans `zones`)
+    pub assignments: Vec<usize>,
+    /// V3 : modulation de gain par nœud (utilisé par la propagation)
+    pub gain_mods: Vec<f64>,
 }
 
 impl ZoneManager {
     /// Construire les zones par partitionnement de Voronoï autour de centres choisis.
     pub fn from_config(config: &ZoneConfig, domain: &Domain) -> Self {
         if !config.enabled || config.num_zones == 0 {
-            return ZoneManager { zones: Vec::new() };
+            let n = domain.num_nodes();
+            return ZoneManager {
+                zones: Vec::new(),
+                assignments: vec![0; n],
+                gain_mods: vec![0.0; n],
+            };
         }
 
         let n = domain.num_nodes();
@@ -92,50 +110,86 @@ impl ZoneManager {
             })
             .collect();
 
-        ZoneManager { zones }
-    }
-
-    /// Phase 0 du tick V2 : mesurer l'activité moyenne de chaque zone.
-    pub fn measure(&mut self, domain: &Domain) {
-        for zone in &mut self.zones {
-            if zone.members.is_empty() {
-                zone.activity_mean = 0.0;
-                continue;
-            }
-            let sum: f64 = zone.members.iter().map(|&i| domain.nodes[i].activation).sum();
-            zone.activity_mean = sum / zone.members.len() as f64;
+        ZoneManager {
+            zones,
+            assignments,
+            gain_mods: vec![0.0; n],
         }
     }
 
-    /// Phase 1 du tick V2 : calculer la correction PID et l'injecter.
+    /// Phase 0 du tick V2 : mesurer l'activité moyenne de chaque zone (parallèle).
+    pub fn measure(&mut self, domain: &Domain) {
+        self.zones.par_iter_mut().for_each(|zone| {
+            if zone.members.is_empty() {
+                zone.activity_mean = 0.0;
+                return;
+            }
+            let sum: f64 = zone.members.iter().map(|&i| domain.nodes[i].activation).sum();
+            zone.activity_mean = sum / zone.members.len() as f64;
+        });
+    }
+
+    /// Phase 1 du tick : calculer la correction PID.
+    /// Dispatche vers le mode direct (V2) ou indirect (V3) selon config.pid_mode.
     pub fn regulate(&mut self, domain: &mut Domain, config: &ZoneConfig) {
+        if config.pid_mode == "indirect" {
+            self.regulate_indirect(domain, config);
+        } else {
+            self.regulate_direct(domain, config);
+        }
+    }
+
+    /// V2 : PID direct — injecter la correction dans l'activation des nœuds.
+    fn regulate_direct(&mut self, domain: &mut Domain, config: &ZoneConfig) {
         for zone in &mut self.zones {
-            // Erreur = consigne - mesure
-            let error = zone.target_activity - zone.activity_mean;
-
-            // Terme intégral (avec anti-windup)
-            zone.integral = (zone.integral + error).clamp(-config.pid_integral_max, config.pid_integral_max);
-
-            // Terme dérivé
-            let derivative = error - zone.error_prev;
-
-            // Sortie PID
-            let u = config.kp * error + config.ki * zone.integral + config.kd * derivative;
-            let u = u.clamp(-config.pid_output_max, config.pid_output_max);
-
-            // Mémoriser pour le prochain tick
+            let (u, error) = Self::compute_pid(zone, config);
             zone.error_prev = error;
             zone.error = error;
             zone.output = u;
 
-            // Injecter la correction dans tous les nœuds de la zone
-            // Chaque nœud reçoit u directement (correction par nœud)
             for &member in &zone.members {
                 domain.nodes[member].activation += u;
-                domain.nodes[member].activation = domain.nodes[member].activation.max(0.0);
-                domain.nodes[member].activation = domain.nodes[member].activation.min(10.0);
+                domain.nodes[member].activation = domain.nodes[member].activation.clamp(0.0, 10.0);
             }
         }
+    }
+
+    /// V3 : PID indirect — moduler le seuil (θ) et le gain de propagation.
+    /// Au lieu d'injecter de l'activation, on ajuste :
+    ///   θ_mod = -k_theta × u  (abaisser le seuil si activité trop basse)
+    ///   g_mod = +k_gain × u   (augmenter le gain si activité trop basse)
+    fn regulate_indirect(&mut self, domain: &mut Domain, config: &ZoneConfig) {
+        for zone in &mut self.zones {
+            let (u, error) = Self::compute_pid(zone, config);
+            zone.error_prev = error;
+            zone.error = error;
+            zone.output = u;
+
+            // V3 : modulations indirectes
+            zone.theta_mod = -config.k_theta * u;
+            zone.gain_mod = config.k_gain * u;
+
+            // Appliquer θ_mod aux nœuds de la zone
+            for &member in &zone.members {
+                domain.nodes[member].threshold_mod = zone.theta_mod;
+            }
+
+            // Stocker gain_mod par nœud pour la propagation
+            for &member in &zone.members {
+                self.gain_mods[member] = zone.gain_mod;
+            }
+        }
+    }
+
+    /// Calcul PID commun aux modes direct et indirect.
+    /// Retourne (u, error).
+    fn compute_pid(zone: &mut Zone, config: &ZoneConfig) -> (f64, f64) {
+        let error = zone.target_activity - zone.activity_mean;
+        zone.integral = (zone.integral + error).clamp(-config.pid_integral_max, config.pid_integral_max);
+        let derivative = error - zone.error_prev;
+        let u = config.kp * error + config.ki * zone.integral + config.kd * derivative;
+        let u = u.clamp(-config.pid_output_max, config.pid_output_max);
+        (u, error)
     }
 
     /// Nombre de zones actives.

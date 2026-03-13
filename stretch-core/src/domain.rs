@@ -6,7 +6,7 @@ use rand_chacha::ChaCha8Rng;
 
 use crate::config::{DomainConfig, EdgeDefaults, NodeDefaults};
 use crate::edge::Edge;
-use crate::node::Node;
+use crate::node::{Node, NeuronType};
 
 /// Domaine spatial : graphe de nœuds et de liaisons.
 /// V1 : positions 3D, indexation KD-tree, topologies KNN / radius / grille.
@@ -16,6 +16,8 @@ pub struct Domain {
     pub edges: Vec<Edge>,
     /// Index rapide : pour chaque nœud, liste des indices dans `edges` des liaisons sortantes
     pub adjacency: Vec<Vec<usize>>,
+    /// Index rapide : pour chaque nœud, liste des indices dans `edges` des liaisons entrantes
+    pub incoming_adjacency: Vec<Vec<usize>>,
     /// Position 3D de chaque nœud
     pub positions: Vec<[f64; 3]>,
 }
@@ -87,7 +89,9 @@ impl Domain {
             }
         }
 
-        Domain { nodes, edges, adjacency, positions }
+        let mut d = Domain { nodes, edges, adjacency, incoming_adjacency: Vec::new(), positions };
+        d.build_incoming_adjacency();
+        d
     }
 
     // -----------------------------------------------------------------------
@@ -130,7 +134,9 @@ impl Domain {
             }
         }
 
-        Domain { nodes, edges, adjacency, positions }
+        let mut d = Domain { nodes, edges, adjacency, incoming_adjacency: Vec::new(), positions };
+        d.build_incoming_adjacency();
+        d
     }
 
     // -----------------------------------------------------------------------
@@ -189,7 +195,9 @@ impl Domain {
             }
         }
 
-        Domain { nodes, edges, adjacency, positions }
+        let mut d = Domain { nodes, edges, adjacency, incoming_adjacency: Vec::new(), positions };
+        d.build_incoming_adjacency();
+        d
     }
 
     // -----------------------------------------------------------------------
@@ -246,7 +254,9 @@ impl Domain {
             }
         }
 
-        Domain { nodes, edges, adjacency, positions }
+        let mut d = Domain { nodes, edges, adjacency, incoming_adjacency: Vec::new(), positions };
+        d.build_incoming_adjacency();
+        d
     }
 
     pub fn num_nodes(&self) -> usize {
@@ -255,6 +265,26 @@ impl Domain {
 
     pub fn num_edges(&self) -> usize {
         self.edges.len()
+    }
+
+    /// Construire l'index des arêtes entrantes par nœud cible.
+    fn build_incoming_adjacency(&mut self) {
+        let n = self.nodes.len();
+        let mut incoming = vec![Vec::new(); n];
+        for (idx, edge) in self.edges.iter().enumerate() {
+            incoming[edge.to].push(idx);
+        }
+        self.incoming_adjacency = incoming;
+    }
+
+    /// V3 : assigner aléatoirement une fraction de nœuds comme inhibiteurs.
+    pub fn assign_neuron_types(&mut self, fraction: f64, seed: u64) {
+        let mut rng = ChaCha8Rng::seed_from_u64(seed.wrapping_add(77777));
+        for node in &mut self.nodes {
+            if rng.gen::<f64>() < fraction {
+                node.node_type = NeuronType::Inhibitory;
+            }
+        }
     }
 }
 

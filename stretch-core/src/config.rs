@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-/// Configuration complète du système V2.
+/// Configuration complète du système V3.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SimConfig {
     pub domain: DomainConfig,
@@ -21,6 +21,15 @@ pub struct SimConfig {
     /// V2 : liste des pacemakers
     #[serde(default)]
     pub pacemakers: Vec<PacemakerConfig>,
+    /// V3 : types neuronaux (E/I)
+    #[serde(default)]
+    pub neuron_types: NeuronTypesConfig,
+    /// V3 : STDP
+    #[serde(default)]
+    pub stdp: StdpConfig,
+    /// V3 : budget synaptique (normalisation)
+    #[serde(default)]
+    pub synaptic_budget: SynapticBudgetConfig,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -72,6 +81,9 @@ pub struct PropagationConfig {
     pub spatial_decay: f64,
     /// Gain de propagation global
     pub gain: f64,
+    /// V3 : facteur de gain pour les neurones inhibiteurs (>0, appliqué en négatif)
+    #[serde(default = "default_gain_inhibitory")]
+    pub gain_inhibitory: f64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -165,6 +177,15 @@ pub struct ZoneConfig {
     /// Borne intégrale (anti-windup)
     #[serde(default = "default_pid_integral_max")]
     pub pid_integral_max: f64,
+    /// V3 : mode PID — "direct" (V2) ou "indirect" (V3)
+    #[serde(default = "default_pid_mode")]
+    pub pid_mode: String,
+    /// V3 : coefficient de modulation du seuil par le PID indirect
+    #[serde(default = "default_k_theta")]
+    pub k_theta: f64,
+    /// V3 : coefficient de modulation du gain par le PID indirect
+    #[serde(default = "default_k_gain")]
+    pub k_gain: f64,
 }
 
 impl Default for ZoneConfig {
@@ -179,6 +200,9 @@ impl Default for ZoneConfig {
             kd: 0.1,
             pid_output_max: 2.0,
             pid_integral_max: 5.0,
+            pid_mode: "direct".into(),
+            k_theta: 0.3,
+            k_gain: 0.2,
         }
     }
 }
@@ -240,6 +264,80 @@ fn default_pacemaker_amplitude() -> f64 { 0.3 }
 fn default_pacemaker_frequency() -> f64 { 0.02 }
 fn default_pacemaker_offset() -> f64 { 0.5 }
 
+fn default_gain_inhibitory() -> f64 { 0.8 }
+fn default_pid_mode() -> String { "direct".into() }
+fn default_k_theta() -> f64 { 0.3 }
+fn default_k_gain() -> f64 { 0.2 }
+fn default_inhibitory_fraction() -> f64 { 0.2 }
+fn default_stdp_a_plus() -> f64 { 0.005 }
+fn default_stdp_a_minus() -> f64 { 0.005 }
+fn default_stdp_tau_plus() -> f64 { 20.0 }
+fn default_stdp_tau_minus() -> f64 { 20.0 }
+fn default_synaptic_budget() -> f64 { 30.0 }
+
+/// V3 : Configuration des types neuronaux E/I
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NeuronTypesConfig {
+    #[serde(default)]
+    pub enabled: bool,
+    #[serde(default = "default_inhibitory_fraction")]
+    pub inhibitory_fraction: f64,
+}
+
+impl Default for NeuronTypesConfig {
+    fn default() -> Self {
+        NeuronTypesConfig {
+            enabled: false,
+            inhibitory_fraction: 0.2,
+        }
+    }
+}
+
+/// V3 : Configuration STDP
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StdpConfig {
+    #[serde(default)]
+    pub enabled: bool,
+    #[serde(default = "default_stdp_a_plus")]
+    pub a_plus: f64,
+    #[serde(default = "default_stdp_a_minus")]
+    pub a_minus: f64,
+    #[serde(default = "default_stdp_tau_plus")]
+    pub tau_plus: f64,
+    #[serde(default = "default_stdp_tau_minus")]
+    pub tau_minus: f64,
+}
+
+impl Default for StdpConfig {
+    fn default() -> Self {
+        StdpConfig {
+            enabled: false,
+            a_plus: 0.005,
+            a_minus: 0.005,
+            tau_plus: 20.0,
+            tau_minus: 20.0,
+        }
+    }
+}
+
+/// V3 : Budget synaptique (normalisation des conductances sortantes)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SynapticBudgetConfig {
+    #[serde(default)]
+    pub enabled: bool,
+    #[serde(default = "default_synaptic_budget")]
+    pub budget: f64,
+}
+
+impl Default for SynapticBudgetConfig {
+    fn default() -> Self {
+        SynapticBudgetConfig {
+            enabled: false,
+            budget: 30.0,
+        }
+    }
+}
+
 fn default_avg_neighbors() -> usize {
     6
 }
@@ -291,6 +389,7 @@ impl Default for SimConfig {
                 kernel: "exponential".into(),
                 spatial_decay: 1.0,
                 gain: 0.15,
+                gain_inhibitory: 0.8,
             },
             plasticity: PlasticityConfig {
                 reinforcement_rate: 0.01,
@@ -324,6 +423,9 @@ impl Default for SimConfig {
             zones: ZoneConfig::default(),
             consolidation: ConsolidationConfig::default(),
             pacemakers: Vec::new(),
+            neuron_types: NeuronTypesConfig::default(),
+            stdp: StdpConfig::default(),
+            synaptic_budget: SynapticBudgetConfig::default(),
         }
     }
 }

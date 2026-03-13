@@ -13,16 +13,9 @@ pub struct Edge {
     pub distance: f64,
     /// Historique de co-activation
     pub coactivity_trace: f64,
-    /// Capacité de la liaison à évoluer
-    pub plasticity: f64,
-    /// Vitesse d'oubli / retour à la ligne de base
-    pub decay: f64,
     /// Compteur d'utilisation (instrumentation)
     pub usage_count: u64,
-    /// Bornes de conductance
-    pub conductance_min: f64,
-    pub conductance_max: f64,
-    /// V2 : ticks conscutifs au-dessus du seuil de consolidation
+    /// V2 : ticks consécutifs au-dessus du seuil de consolidation
     pub consolidation_counter: usize,
     /// V2 : l'arête est-elle consolidée (decay désactivé) ?
     pub consolidated: bool,
@@ -36,11 +29,7 @@ impl Edge {
             conductance: defaults.conductance,
             distance,
             coactivity_trace: 0.0,
-            plasticity: defaults.plasticity,
-            decay: defaults.decay,
             usage_count: 0,
-            conductance_min: defaults.conductance_min,
-            conductance_max: defaults.conductance_max,
             consolidation_counter: 0,
             consolidated: false,
         }
@@ -61,17 +50,15 @@ impl Edge {
 
     /// Mettre à jour la conductance selon la plasticité (Hebbian-like).
     /// Si l'arête est consolidée, seul le renforcement est possible (pas d'affaiblissement).
-    pub fn update_conductance(&mut self, reinforcement_rate: f64, weakening_rate: f64, coact_threshold: f64) {
+    pub fn update_conductance(&mut self, reinforcement_rate: f64, weakening_rate: f64, coact_threshold: f64, plasticity: f64, cond_min: f64, cond_max: f64) {
         if self.coactivity_trace > coact_threshold {
-            // Renforcement
-            let delta = reinforcement_rate * self.plasticity * (self.coactivity_trace - coact_threshold);
+            let delta = reinforcement_rate * plasticity * (self.coactivity_trace - coact_threshold);
             self.conductance += delta;
         } else if !self.consolidated {
-            // Affaiblissement lent (désactivé si consolidé)
-            let delta = weakening_rate * self.plasticity;
+            let delta = weakening_rate * plasticity;
             self.conductance -= delta;
         }
-        self.conductance = self.conductance.clamp(self.conductance_min, self.conductance_max);
+        self.conductance = self.conductance.clamp(cond_min, cond_max);
     }
 
     /// V2 : mettre à jour le compteur de consolidation.
