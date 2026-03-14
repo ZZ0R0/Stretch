@@ -12,21 +12,25 @@ pub struct Zone {
     /// Indices des nœuds standards appartenant à cette zone
     pub members: Vec<usize>,
     /// Activité moyenne mesurée de la zone
-    pub activity_mean: f64,
+    pub activity_mean: f32,
     /// Consigne d'activité
-    pub target_activity: f64,
+    pub target_activity: f32,
     /// PID : erreur courante
-    pub error: f64,
+    pub error: f32,
     /// PID : intégrale cumulée
-    pub integral: f64,
+    pub integral: f32,
     /// PID : erreur précédente (pour le terme dérivé)
-    pub error_prev: f64,
+    pub error_prev: f32,
     /// PID : dernière sortie calculée
-    pub output: f64,
+    pub output: f32,
     /// V3 : modulation du seuil (PID indirect)
-    pub theta_mod: f64,
+    pub theta_mod: f32,
     /// V3 : modulation du gain (PID indirect)
-    pub gain_mod: f64,
+    pub gain_mod: f32,
+    /// C6 : nombre de ticks consécutifs avec |error| < ε
+    pub stable_ticks: usize,
+    /// C6 : est-ce que la zone est en mode skip ?
+    pub is_stable: bool,
 }
 
 impl Zone {
@@ -35,13 +39,15 @@ impl Zone {
             control_node,
             members,
             activity_mean: 0.0,
-            target_activity: target,
+            target_activity: target as f32,
             error: 0.0,
             integral: 0.0,
             error_prev: 0.0,
             output: 0.0,
             theta_mod: 0.0,
             gain_mod: 0.0,
+            stable_ticks: 0,
+            is_stable: false,
         }
     }
 }
@@ -53,7 +59,7 @@ pub struct ZoneManager {
     /// V3 : assignation nœud → zone (index dans `zones`)
     pub assignments: Vec<usize>,
     /// V3 : modulation de gain par nœud (utilisé par la propagation)
-    pub gain_mods: Vec<f64>,
+    pub gain_mods: Vec<f32>,
 }
 
 impl ZoneManager {
@@ -118,14 +124,20 @@ impl ZoneManager {
     }
 
     /// Phase 0 du tick V2 : mesurer l'activité moyenne de chaque zone (parallèle).
+    /// C6: skip stable zones (only measure every N ticks to check for reactivation).
     pub fn measure(&mut self, domain: &Domain) {
         self.zones.par_iter_mut().for_each(|zone| {
             if zone.members.is_empty() {
                 zone.activity_mean = 0.0;
                 return;
             }
-            let sum: f64 = zone.members.iter().map(|&i| domain.nodes[i].activation).sum();
-            zone.activity_mean = sum / zone.members.len() as f64;
+            // C6: stable zones are measured every 10 ticks for reactivation check
+            if zone.is_stable && zone.stable_ticks % 10 != 0 {
+                zone.stable_ticks += 1;
+                return;
+            }
+            let sum: f32 = zone.members.iter().map(|&i| domain.nodes[i].activation).sum();
+            zone.activity_mean = sum / zone.members.len() as f32;
         });
     }
 
@@ -142,10 +154,17 @@ impl ZoneManager {
     /// V2 : PID direct — injecter la correction dans l'activation des nœuds.
     fn regulate_direct(&mut self, domain: &mut Domain, config: &ZoneConfig) {
         for zone in &mut self.zones {
+            // C6: skip stable zones
+            if zone.is_stable {
+                Self::check_stability(zone);
+                if zone.is_stable { continue; }
+            }
+
             let (u, error) = Self::compute_pid(zone, config);
             zone.error_prev = error;
             zone.error = error;
             zone.output = u;
+            Self::update_stability(zone, error);
 
             for &member in &zone.members {
                 domain.nodes[member].activation += u;
@@ -155,40 +174,67 @@ impl ZoneManager {
     }
 
     /// V3 : PID indirect — moduler le seuil (θ) et le gain de propagation.
-    /// Au lieu d'injecter de l'activation, on ajuste :
-    ///   θ_mod = -k_theta × u  (abaisser le seuil si activité trop basse)
-    ///   g_mod = +k_gain × u   (augmenter le gain si activité trop basse)
     fn regulate_indirect(&mut self, domain: &mut Domain, config: &ZoneConfig) {
         for zone in &mut self.zones {
+            // C6: skip stable zones
+            if zone.is_stable {
+                Self::check_stability(zone);
+                if zone.is_stable { continue; }
+            }
+
             let (u, error) = Self::compute_pid(zone, config);
             zone.error_prev = error;
             zone.error = error;
             zone.output = u;
+            Self::update_stability(zone, error);
 
-            // V3 : modulations indirectes
-            zone.theta_mod = -config.k_theta * u;
-            zone.gain_mod = config.k_gain * u;
+            zone.theta_mod = -(config.k_theta as f32) * u;
+            zone.gain_mod = (config.k_gain as f32) * u;
 
-            // Appliquer θ_mod aux nœuds de la zone
             for &member in &zone.members {
                 domain.nodes[member].threshold_mod = zone.theta_mod;
             }
 
-            // Stocker gain_mod par nœud pour la propagation
             for &member in &zone.members {
                 self.gain_mods[member] = zone.gain_mod;
             }
         }
     }
 
+    /// C6: Update stability tracking after PID computation.
+    fn update_stability(zone: &mut Zone, error: f32) {
+        const STABLE_EPSILON: f32 = 0.01;
+        const STABLE_TICKS_REQUIRED: usize = 50;
+
+        if error.abs() < STABLE_EPSILON {
+            zone.stable_ticks += 1;
+            if zone.stable_ticks >= STABLE_TICKS_REQUIRED {
+                zone.is_stable = true;
+            }
+        } else {
+            zone.stable_ticks = 0;
+            zone.is_stable = false;
+        }
+    }
+
+    /// C6: Check if a stable zone should be reactivated (measured periodically).
+    fn check_stability(zone: &mut Zone) {
+        const REACTIVATION_EPSILON: f32 = 0.05;
+        let error = zone.target_activity - zone.activity_mean;
+        if error.abs() > REACTIVATION_EPSILON {
+            zone.is_stable = false;
+            zone.stable_ticks = 0;
+        }
+    }
+
     /// Calcul PID commun aux modes direct et indirect.
     /// Retourne (u, error).
-    fn compute_pid(zone: &mut Zone, config: &ZoneConfig) -> (f64, f64) {
+    fn compute_pid(zone: &mut Zone, config: &ZoneConfig) -> (f32, f32) {
         let error = zone.target_activity - zone.activity_mean;
-        zone.integral = (zone.integral + error).clamp(-config.pid_integral_max, config.pid_integral_max);
+        zone.integral = (zone.integral + error).clamp(-(config.pid_integral_max as f32), config.pid_integral_max as f32);
         let derivative = error - zone.error_prev;
-        let u = config.kp * error + config.ki * zone.integral + config.kd * derivative;
-        let u = u.clamp(-config.pid_output_max, config.pid_output_max);
+        let u = (config.kp as f32) * error + (config.ki as f32) * zone.integral + (config.kd as f32) * derivative;
+        let u = u.clamp(-(config.pid_output_max as f32), config.pid_output_max as f32);
         (u, error)
     }
 
@@ -202,8 +248,8 @@ impl ZoneManager {
         if self.zones.is_empty() {
             return 0.0;
         }
-        let sum: f64 = self.zones.iter().map(|z| z.activity_mean).sum();
-        sum / self.zones.len() as f64
+        let sum: f32 = self.zones.iter().map(|z| z.activity_mean).sum();
+        sum as f64 / self.zones.len() as f64
     }
 
     /// Erreur PID moyenne (absolue).
@@ -211,8 +257,8 @@ impl ZoneManager {
         if self.zones.is_empty() {
             return 0.0;
         }
-        let sum: f64 = self.zones.iter().map(|z| z.error.abs()).sum();
-        sum / self.zones.len() as f64
+        let sum: f32 = self.zones.iter().map(|z| z.error.abs()).sum();
+        sum as f64 / self.zones.len() as f64
     }
 
     /// Sortie PID moyenne.
@@ -220,8 +266,8 @@ impl ZoneManager {
         if self.zones.is_empty() {
             return 0.0;
         }
-        let sum: f64 = self.zones.iter().map(|z| z.output).sum();
-        sum / self.zones.len() as f64
+        let sum: f32 = self.zones.iter().map(|z| z.output).sum();
+        sum as f64 / self.zones.len() as f64
     }
 }
 

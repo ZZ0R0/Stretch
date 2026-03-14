@@ -14,7 +14,7 @@ pub fn inject_stimuli(domain: &mut Domain, stimuli: &[StimulusConfig], tick: usi
             }
         }
         if stim.node < domain.nodes.len() {
-            domain.nodes[stim.node].inject_stimulus(stim.intensity);
+            domain.nodes[stim.node].inject_stimulus(stim.intensity as f32);
         }
     }
 }

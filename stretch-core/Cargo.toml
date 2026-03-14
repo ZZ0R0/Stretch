@@ -11,3 +11,6 @@ rand_chacha = "0.3"
 toml = "0.8"
 kiddo = "4"
 rayon = "1.10"
+wgpu = "24"
+bytemuck = { version = "1", features = ["derive"] }
+pollster = "0.4"

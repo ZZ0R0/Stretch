@@ -1,0 +1,161 @@
+# ============================================================================
+# Stretch V4 — Configuration finale
+# ============================================================================
+#
+# Règle des trois facteurs (Frémaux & Gerstner 2016) :
+#   STDP ψ → trace d'éligibilité e → dopamine × éligibilité → ΔC
+#
+# Pipeline par tick :
+#   1. Zones PID (régulation activité)
+#   2. Injection entrée (InputEncoder, 2 classes)
+#   3. Propagation (CSR fired-only, C1)
+#   4. Dissipation (skip nœuds repos, C5)
+#   5. Plasticité : STDP → élig → 3-facteurs → homéo → conso → budget
+#   6. Readout + récompense → dopamine
+#
+# Optimisations V4.2 :
+#   CPU : C1 fired-only, C2 active edges, C3 hot edges, C4 budget incrémental,
+#         C5 skip équilibre, C6 skip zones stables
+#   GPU : wgpu compute shaders (plasticity, propagation, budget)
+#
+# Cible : <5 ms/tick pour 50k nœuds, 577k arêtes
+# ============================================================================
+
+# --- Graphe spatial -----------------------------------------------------------
+[domain]
+topology = "knn_3d"       # knn_3d | radius_3d | random_sparse | grid2d
+size = 5000000              # 50k nœuds
+k_neighbors = 10          # ~577k arêtes bidirectionnelles
+domain_extent = 100.0     # cube 100³
+seed = 42
+
+# --- Nœuds (valeurs initiales) -----------------------------------------------
+[node_defaults]
+activation = 0.0
+threshold = 0.2           # seuil d'activation (modulé par PID indirect)
+fatigue = 0.0
+memory_trace = 0.0
+excitability = 1.0
+inhibition = 0.0
+
+# --- Arêtes (valeurs initiales + homéostasie) --------------------------------
+[edge_defaults]
+conductance = 1.0         # C₀ baseline — cible homéostatique
+plasticity = 1.0
+decay = 0.0001            # taux homéostatique : C → C₀ lentement
+conductance_min = 0.1     # plancher
+conductance_max = 5.0     # plafond
+
+# --- Propagation (kernel spatial + gain) --------------------------------------
+[propagation]
+kernel = "exponential"    # K(d) = exp(-λ·d)
+spatial_decay = 0.3       # λ — décroissance spatiale du kernel
+gain = 0.8                # G global (sous-critique à C=1, super-critique à C≥3)
+gain_inhibitory = 0.8     # gain des neurones inhibiteurs
+
+# --- Dissipation (dynamique intrinsèque des nœuds) ---------------------------
+[dissipation]
+activation_decay = 0.25   # décroissance exponentielle de l'activation
+fatigue_gain = 0.20       # accumulation de fatigue quand actif
+fatigue_recovery = 0.05   # récupération de fatigue au repos
+inhibition_gain = 0.12    # accumulation d'inhibition latérale
+inhibition_decay = 0.03   # décroissance de l'inhibition
+trace_gain = 0.1          # accumulation de la trace mémoire
+trace_decay = 0.005       # décroissance de la trace mémoire
+activation_min = 0.01     # seuil plancher d'activation
+decay_jitter = 0.15       # bruit multiplicatif sur le decay (symétrie-breaking)
+
+# --- Simulation ---------------------------------------------------------------
+[simulation]
+total_ticks = 5000        # durée totale (0 = infini)
+snapshot_interval = 10    # métriques toutes les N itérations
+seed = 42
+
+# --- Types neuronaux E/I (V3) ------------------------------------------------
+[neuron_types]
+inhibitory_fraction = 0.2 # 20% inhibiteurs, 80% excitateurs
+
+# --- Zones PID indirect (V3) — régulation spatiale de l'activité -------------
+[zones]
+num_zones = 8
+partition_method = "voronoi"
+target_activity = 0.3     # activité cible sparse (~5% nœuds actifs)
+kp = 0.5                  # gain proportionnel
+ki = 0.05                 # gain intégral
+kd = 0.1                  # gain dérivé
+pid_output_max = 2.0      # saturation sortie PID
+pid_integral_max = 5.0    # saturation intégrale (anti-windup)
+pid_mode = "indirect"     # "indirect" = modulation θ/gain (V3+), "direct" = injection
+k_theta = 0.3             # PID → modulation du seuil d'activation
+k_gain = 0.2              # PID → modulation du gain de propagation
+
+# --- STDP — direction d'apprentissage ψ (V3) ---------------------------------
+# Calcule ψ_ij = direction LTP/LTD, mais NE modifie PAS C directement.
+# ψ alimente la trace d'éligibilité (voir [eligibility]).
+[stdp]
+a_plus = 0.005            # amplitude LTP (pré→post)
+a_minus = 0.005           # amplitude LTD (post→pré), symétrique
+tau_plus = 20.0           # constante de temps LTP (ticks)
+tau_minus = 20.0          # constante de temps LTD (ticks)
+
+# --- Traces d'éligibilité (V4) -----------------------------------------------
+# e_ij(t+1) = γ·e_ij(t) + ψ_ij — mémoire des événements STDP récents
+# La dopamine multiplie e pour produire ΔC (étape trois-facteurs)
+[eligibility]
+decay = 0.85              # γ — demi-vie ≈ 4 ticks (rapide)
+max = 5.0                 # clamp |e| ≤ max
+
+# --- Dopamine — signal de surprise (V4) --------------------------------------
+# Règle trois-facteurs : ΔC_ij = η × δ_d × e_ij
+# δ_d = dopamine_level - tonic (phasique = surprise)
+# Mode spatial : δ_d(node) = dopa_phasic × exp(-λ·dist(node, reward_center))
+[dopamine]
+tonic = 0.1               # niveau tonique (baseline)
+phasic_decay = 0.15       # décroissance du signal phasique par tick
+reward_gain = 1.0         # amplification reward → dopamine
+plasticity_gain = 2.0     # η — taux d'apprentissage trois-facteurs
+consolidation_threshold = 0.3  # seuil dopamine pour la consolidation
+phasic_max = 2.0          # saturation phasique
+spatial_lambda = 0.15     # λ spatial (0 = global, >0 = dopamine localisée)
+
+# --- Récompense (V4) ---------------------------------------------------------
+[reward]
+reward_positive = 1.0     # récompense correcte → dopamine burst
+reward_negative = -0.5    # erreur → dip dopaminergique
+
+# --- Consolidation mémoire (V4) — gatée dopamine + éligibilité ---------------
+# Si dopamine > seuil ET e > 0 pendant N ticks → arête consolidée (fixée)
+[consolidation]
+threshold = 4.0           # seuil de conductance pour la consolidation
+ticks_required = 50       # ticks consécutifs requis
+
+# --- Budget synaptique — normalisation par nœud source ------------------------
+# Σ C_ij ≤ budget pour chaque source i (stabilise le réseau)
+[synaptic_budget]
+budget = 30.0             # budget maximal par nœud source
+interval = 50             # intervalle entre normalisations (CPU only)
+
+# --- Interface d'entrée (V4) — 2 classes × 50 nœuds -------------------------
+# L'InputEncoder sélectionne les nœuds les plus proches des positions cibles
+# automatiquement via setup_v4_training() — start_node est un fallback
+[input]
+num_classes = 2
+group_size = 50
+start_node = 0
+intensity = 1.5           # amplitude d'injection
+
+# --- Interface de sortie (V4) — 2 classes × 50 nœuds ------------------------
+# L'OutputReader lit l'activité moyenne par groupe après read_delay ticks
+[output]
+num_classes = 2
+group_size = 50
+start_node = 500
+read_delay = 10           # délai entre fin stimulus et lecture
+
+# --- Compute backend (V4.2) --------------------------------------------------
+# "auto" = tente GPU (wgpu Vulkan/Metal/DX12), fallback CPU si indisponible
+# "cpu"  = force CPU (rayon + optimisations C1-C6)
+# "gpu"  = force GPU (erreur si indisponible)
+[compute]
+backend = "auto"
+gpu_workgroup_size = 256  # threads par workgroup dans les shaders WGSL

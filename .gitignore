@@ -1,4 +1,4 @@
 /target
-./edge_conductances.json
-./node_traces.json
-./metrics_output.json
+edge_conductances.json
+node_traces.json
+metrics_output.json

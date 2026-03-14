@@ -11,7 +11,7 @@ pub fn apply_pacemakers(domain: &mut Domain, pacemakers: &[PacemakerConfig], tic
             continue;
         }
         let oscillation = pm.amplitude * (2.0 * std::f64::consts::PI * pm.frequency * t + pm.phase).sin();
-        let injection = pm.offset + oscillation;
+        let injection = (pm.offset + oscillation) as f32;
         // Le pacemaker injecte une activation, bornée positivement
         if injection > 0.0 {
             domain.nodes[pm.node].activation += injection;

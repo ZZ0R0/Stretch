@@ -1,8 +1,8 @@
 use macroquad::prelude::*;
+use std::sync::Arc;
 
 use stretch_core::config::SimConfig;
-use stretch_core::node::NeuronType;
-use stretch_core::simulation::Simulation;
+use stretch_core::simulation::{Simulation, VizSnapshot};
 
 // ---------------------------------------------------------------------------
 // Constantes de rendu
@@ -59,7 +59,6 @@ enum ViewMode {
     Activation,
     MemoryTrace,
     Fatigue,
-    Conductance,
 }
 
 struct VizState {
@@ -73,27 +72,48 @@ struct VizState {
     // 3D rotation
     angle_y: f32,
     angle_x: f32,
+    // Shared constant data for snapshots
+    positions: Arc<Vec<[f64; 3]>>,
+    is_excitatory: Arc<Vec<bool>>,
+    // Topology name (for top bar)
+    topology: String,
 }
 
 impl VizState {
     fn new(config: SimConfig) -> Self {
         let is_grid = config.domain.topology == "grid2d";
         let grid_side = if is_grid { config.domain.size } else { 0 };
+        let topology = config.domain.topology.clone();
         let mut sim = Simulation::new(config);
         // V4 : configurer I/O spatial + trials
         let n = sim.setup_v4_training();
         eprintln!("[Viz V4] {} trials programmés", n);
+
+        let positions = Arc::new(sim.domain.positions.clone());
+        let is_excitatory = Arc::new(
+            sim.domain.nodes.iter()
+                .map(|n| n.node_type == stretch_core::node::NeuronType::Excitatory)
+                .collect(),
+        );
+
         VizState {
             sim,
             paused: false,
-            ticks_per_frame: 4,
+            ticks_per_frame: 1,
             view_mode: ViewMode::Activation,
             is_grid,
             grid_side,
             finished: false,
             angle_y: 0.6,
             angle_x: 0.4,
+            positions,
+            is_excitatory,
+            topology,
         }
+    }
+
+    fn build_snapshot(&self) -> VizSnapshot {
+        self.sim.build_viz_snapshot(&self.positions, &self.is_excitatory)
     }
 }
 
@@ -102,7 +122,7 @@ impl VizState {
 // ---------------------------------------------------------------------------
 fn window_conf() -> Conf {
     Conf {
-        window_title: "Stretch V3 — Visualisation 3D".to_string(),
+        window_title: "Stretch V4 — Visualisation 3D".to_string(),
         window_width: 1280,
         window_height: 900,
         window_resizable: true,
@@ -148,9 +168,6 @@ async fn main() {
         if is_key_pressed(KeyCode::Key3) {
             viz.view_mode = ViewMode::Fatigue;
         }
-        if is_key_pressed(KeyCode::Key4) {
-            viz.view_mode = ViewMode::Conductance;
-        }
         if is_key_pressed(KeyCode::Up) {
             viz.ticks_per_frame = (viz.ticks_per_frame * 2).min(256);
         }
@@ -189,15 +206,18 @@ async fn main() {
             }
         }
 
+        // --- Build snapshot for rendering ---
+        let snap = viz.build_snapshot();
+
         // --- Rendu ---
         clear_background(Color::new(0.12, 0.12, 0.15, 1.0));
-        draw_top_bar(&viz);
+        draw_top_bar(&snap, &viz);
         if viz.is_grid {
-            draw_grid(&viz);
+            draw_grid(&snap, &viz);
         } else {
-            draw_points_3d(&viz);
+            draw_points_3d(&snap, &viz);
         }
-        draw_sidebar(&viz);
+        draw_sidebar(&snap);
 
         next_frame().await;
     }
@@ -206,8 +226,8 @@ async fn main() {
 // ---------------------------------------------------------------------------
 // Barre supérieure : tick, état, vitesse
 // ---------------------------------------------------------------------------
-fn draw_top_bar(viz: &VizState) {
-    let status = if viz.finished {
+fn draw_top_bar(snap: &VizSnapshot, viz: &VizState) {
+    let status = if snap.finished {
         "TERMINÉ"
     } else if viz.paused {
         "PAUSE"
@@ -219,22 +239,20 @@ fn draw_top_bar(viz: &VizState) {
         ViewMode::Activation => "Activation",
         ViewMode::MemoryTrace => "Trace mémoire",
         ViewMode::Fatigue => "Fatigue",
-        ViewMode::Conductance => "Conductance",
     };
 
-    let topo = &viz.sim.config.domain.topology;
     let total = viz.sim.total_ticks();
     let tick_str = if total == 0 {
-        format!("{}", viz.sim.tick)
+        format!("{}", snap.tick)
     } else {
-        format!("{}/{}", viz.sim.tick, total)
+        format!("{}/{}", snap.tick, total)
     };
     let text = format!(
-        "Tick: {} | {} | {}x | {} | {} [1-4]",
+        "Tick: {} | {} | {}x | {} | {} [1-3]",
         tick_str,
         status,
         viz.ticks_per_frame,
-        topo,
+        &viz.topology,
         mode_name
     );
     draw_text(&text, 10.0, 25.0, 20.0, WHITE);
@@ -243,7 +261,7 @@ fn draw_top_bar(viz: &VizState) {
 // ---------------------------------------------------------------------------
 // Grille heatmap principale
 // ---------------------------------------------------------------------------
-fn draw_grid(viz: &VizState) {
+fn draw_grid(snap: &VizSnapshot, viz: &VizState) {
     let sw = screen_width();
     let sh = screen_height();
 
@@ -261,43 +279,18 @@ fn draw_grid(viz: &VizState) {
     let ox = PANEL_GAP;
     let oy = TOP_BAR_H + PANEL_GAP;
 
-    // Calculer min/max pour normalisation
-    let (values, label_max): (Vec<f64>, &str) = match viz.view_mode {
-        ViewMode::Activation => {
-            let vals: Vec<f64> = viz.sim.domain.nodes.iter().map(|n| n.activation).collect();
-            (vals, "act")
-        }
-        ViewMode::MemoryTrace => {
-            let vals: Vec<f64> = viz.sim.domain.nodes.iter().map(|n| n.memory_trace).collect();
-            (vals, "trace")
-        }
-        ViewMode::Fatigue => {
-            let vals: Vec<f64> = viz.sim.domain.nodes.iter().map(|n| n.fatigue).collect();
-            (vals, "fatigue")
-        }
-        ViewMode::Conductance => {
-            // Conductance moyenne des liaisons sortantes par nœud
-            let mut cond_by_node = vec![0.0_f64; viz.sim.domain.nodes.len()];
-            let mut count_by_node = vec![0_usize; viz.sim.domain.nodes.len()];
-            for edge in &viz.sim.domain.edges {
-                cond_by_node[edge.from] += edge.conductance;
-                count_by_node[edge.from] += 1;
-            }
-            for i in 0..cond_by_node.len() {
-                if count_by_node[i] > 0 {
-                    cond_by_node[i] /= count_by_node[i] as f64;
-                }
-            }
-            (cond_by_node, "cond")
-        }
+    let (values, label_max): (&[f32], &str) = match viz.view_mode {
+        ViewMode::Activation => (&snap.activations, "act"),
+        ViewMode::MemoryTrace => (&snap.memory_traces, "trace"),
+        ViewMode::Fatigue => (&snap.fatigues, "fatigue"),
     };
 
-    let max_val = values.iter().cloned().fold(0.001_f64, f64::max);
+    let max_val = values.iter().cloned().fold(0.001_f32, f32::max);
 
     for (i, &val) in values.iter().enumerate() {
         let row = i / side;
         let col = i % side;
-        let normalized = (val / max_val) as f32;
+        let normalized = val / max_val;
         let color = heat_color(normalized);
 
         let x = ox + col as f32 * cell_size;
@@ -314,7 +307,6 @@ fn draw_grid(viz: &VizState) {
         16.0,
         GRAY,
     );
-    // Barre de couleur
     let bar_x = ox + 80.0;
     let bar_w = 200.0;
     for px in 0..bar_w as u32 {
@@ -334,49 +326,32 @@ fn draw_grid(viz: &VizState) {
 // ---------------------------------------------------------------------------
 // Rendu 3D : nuage de points avec projection orthographique + rotation
 // ---------------------------------------------------------------------------
-fn draw_points_3d(viz: &VizState) {
+fn draw_points_3d(snap: &VizSnapshot, viz: &VizState) {
     let sw = screen_width();
     let sh = screen_height();
 
     let area_w = sw - SIDEBAR_W - PANEL_GAP * 2.0;
     let area_h = sh - TOP_BAR_H - PANEL_GAP * 2.0;
 
-    // Calculer les valeurs par nœud
-    let (values, label_max): (Vec<f64>, &str) = match viz.view_mode {
-        ViewMode::Activation => {
-            (viz.sim.domain.nodes.iter().map(|n| n.activation).collect(), "act")
-        }
-        ViewMode::MemoryTrace => {
-            (viz.sim.domain.nodes.iter().map(|n| n.memory_trace).collect(), "trace")
-        }
-        ViewMode::Fatigue => {
-            (viz.sim.domain.nodes.iter().map(|n| n.fatigue).collect(), "fatigue")
-        }
-        ViewMode::Conductance => {
-            let mut cond_by_node = vec![0.0_f64; viz.sim.domain.nodes.len()];
-            let mut count_by_node = vec![0_usize; viz.sim.domain.nodes.len()];
-            for edge in &viz.sim.domain.edges {
-                cond_by_node[edge.from] += edge.conductance;
-                count_by_node[edge.from] += 1;
-            }
-            for i in 0..cond_by_node.len() {
-                if count_by_node[i] > 0 {
-                    cond_by_node[i] /= count_by_node[i] as f64;
-                }
-            }
-            (cond_by_node, "cond")
-        }
+    let values: &[f32] = match viz.view_mode {
+        ViewMode::Activation => &snap.activations,
+        ViewMode::MemoryTrace => &snap.memory_traces,
+        ViewMode::Fatigue => &snap.fatigues,
+    };
+    let label_max = match viz.view_mode {
+        ViewMode::Activation => "act",
+        ViewMode::MemoryTrace => "trace",
+        ViewMode::Fatigue => "fatigue",
     };
 
-    let max_val = values.iter().cloned().fold(0.001_f64, f64::max);
+    let max_val = values.iter().cloned().fold(0.001_f32, f32::max);
 
-    // Project all 3D positions to 2D
-    let positions = &viz.sim.domain.positions;
+    let positions = &*snap.positions;
     if positions.is_empty() {
         return;
     }
 
-    // Compute bounding box of projected points for fitting
+    // Project all 3D positions to 2D
     let projected: Vec<(f32, f32)> = positions
         .iter()
         .map(|p| project_3d(p, viz.angle_y, viz.angle_x))
@@ -395,38 +370,47 @@ fn draw_points_3d(viz: &VizState) {
     let range_x = (max_x - min_x).max(1.0);
     let range_y = (max_y - min_y).max(1.0);
 
-    let margin = 20.0;
-    let usable_w = area_w - margin * 2.0;
-    let usable_h = area_h - margin * 2.0;
+    let margin_px = 20.0;
+    let usable_w = area_w - margin_px * 2.0;
+    let usable_h = area_h - margin_px * 2.0;
     let scale = (usable_w / range_x).min(usable_h / range_y);
 
-    let ox = PANEL_GAP + margin + (usable_w - range_x * scale) * 0.5;
-    let oy = TOP_BAR_H + PANEL_GAP + margin + (usable_h - range_y * scale) * 0.5;
+    let ox = PANEL_GAP + margin_px + (usable_w - range_x * scale) * 0.5;
+    let oy = TOP_BAR_H + PANEL_GAP + margin_px + (usable_h - range_y * scale) * 0.5;
 
-    // Choose point radius based on number of nodes
     let n = positions.len();
     let point_r = if n < 500 { 4.0 } else if n < 5000 { 2.5 } else { 1.5 };
+    let d = point_r * 2.0;
 
+    // Culling: only draw active nodes (activation > 0.01)
+    // Inactive nodes get a dim background color
+    // We draw all nodes with a dim base, then overdraw active ones
+    let dim_exc = Color::new(0.15, 0.15, 0.18, 1.0);
+    let dim_inh = Color::new(0.18, 0.10, 0.22, 1.0);
+
+    // Draw inactive nodes as dim background
     for (i, &(px, py)) in projected.iter().enumerate() {
+        if values[i] >= 0.01 {
+            continue; // will be drawn in active pass
+        }
         let sx = ox + (px - min_x) * scale;
         let sy = oy + (py - min_y) * scale;
-        let normalized = (values[i] / max_val) as f32;
-        let color = if normalized < 0.01 {
-            // V3 : faint color for inactive — purple tint for inhibitory
-            if viz.sim.domain.nodes[i].node_type == NeuronType::Inhibitory {
-                Color::new(0.18, 0.10, 0.22, 1.0)
-            } else {
-                Color::new(0.15, 0.15, 0.18, 1.0)
-            }
-        } else if viz.sim.domain.nodes[i].node_type == NeuronType::Inhibitory {
-            // V3 : inhibitory nodes use a cool blue-purple palette
+        let color = if snap.is_excitatory[i] { dim_exc } else { dim_inh };
+        draw_rectangle(sx - point_r, sy - point_r, d, d, color);
+    }
+
+    // Draw active nodes with full color (using active_indices for culling)
+    for &i in &snap.active_indices {
+        let (px, py) = projected[i];
+        let sx = ox + (px - min_x) * scale;
+        let sy = oy + (py - min_y) * scale;
+        let normalized = values[i] / max_val;
+        let color = if !snap.is_excitatory[i] {
             let t = normalized.clamp(0.0, 1.0);
             Color::new(0.3 * t, 0.1 * t, 0.6 + 0.4 * t, 1.0)
         } else {
             heat_color(normalized)
         };
-        // Utiliser des rectangles au lieu de cercles pour 5x moins de vertices (perf)
-        let d = point_r * 2.0;
         draw_rectangle(sx - point_r, sy - point_r, d, d, color);
     }
 
@@ -454,7 +438,6 @@ fn draw_points_3d(viz: &VizState) {
         GRAY,
     );
 
-    // 3D rotation hint
     draw_text(
         "Rotation: W/A/S/D",
         PANEL_GAP + 10.0,
@@ -467,7 +450,7 @@ fn draw_points_3d(viz: &VizState) {
 // ---------------------------------------------------------------------------
 // Sidebar : métriques en temps réel
 // ---------------------------------------------------------------------------
-fn draw_sidebar(viz: &VizState) {
+fn draw_sidebar(snap: &VizSnapshot) {
     let sw = screen_width();
     let sx = sw - SIDEBAR_W;
     let sy = TOP_BAR_H + PANEL_GAP;
@@ -485,87 +468,65 @@ fn draw_sidebar(viz: &VizState) {
         *y += line_h;
     };
 
+    let m = &snap.metrics;
+
     draw_text("--- MÉTRIQUES ---", x, y, 16.0, YELLOW);
     y += line_h * 1.5;
 
-    let nodes = &viz.sim.domain.nodes;
-    let edges = &viz.sim.domain.edges;
-
-    let active = nodes.iter().filter(|n| n.is_active()).count();
-    let energy: f64 = nodes.iter().map(|n| n.activation).sum();
-    let max_act = nodes.iter().map(|n| n.activation).fold(0.0_f64, f64::max);
-    let mean_trace = nodes.iter().map(|n| n.memory_trace).sum::<f64>() / nodes.len().max(1) as f64;
-    let max_trace = nodes.iter().map(|n| n.memory_trace).fold(0.0_f64, f64::max);
-    let mean_fatigue = nodes.iter().map(|n| n.fatigue).sum::<f64>() / nodes.len().max(1) as f64;
-    let mean_cond = edges.iter().map(|e| e.conductance).sum::<f64>() / edges.len().max(1) as f64;
-    let max_cond = edges.iter().map(|e| e.conductance).fold(0.0_f64, f64::max);
-
-    draw_label(&mut y, "Nœuds actifs:", &format!("{}", active));
-    draw_label(&mut y, "Énergie:", &format!("{:.2}", energy));
-    draw_label(&mut y, "Max activation:", &format!("{:.3}", max_act));
+    draw_label(&mut y, "Nœuds actifs:", &format!("{}", m.active_count));
+    draw_label(&mut y, "Énergie:", &format!("{:.2}", m.total_energy));
+    draw_label(&mut y, "Max activation:", &format!("{:.3}", m.max_activation));
     y += line_h * 0.5;
-    draw_label(&mut y, "Trace moyenne:", &format!("{:.3}", mean_trace));
-    draw_label(&mut y, "Trace max:", &format!("{:.3}", max_trace));
+    draw_label(&mut y, "Trace moyenne:", &format!("{:.3}", m.mean_trace));
+    draw_label(&mut y, "Trace max:", &format!("{:.3}", m.max_trace));
     y += line_h * 0.5;
-    draw_label(&mut y, "Fatigue moy.:", &format!("{:.3}", mean_fatigue));
+    draw_label(&mut y, "Fatigue moy.:", &format!("{:.3}", m.mean_fatigue));
     y += line_h * 0.5;
-    draw_label(&mut y, "Cond. moyenne:", &format!("{:.3}", mean_cond));
-    draw_label(&mut y, "Cond. max:", &format!("{:.3}", max_cond));
+    draw_label(&mut y, "Cond. moyenne:", &format!("{:.3}", m.mean_conductance));
+    draw_label(&mut y, "Cond. max:", &format!("{:.3}", m.max_conductance));
 
-    // V2 : métriques zones et consolidation
-    let consolidated = edges.iter().filter(|e| e.consolidated).count();
-    if consolidated > 0 {
+    if m.consolidated_edges > 0 {
         y += line_h * 0.5;
-        draw_label(&mut y, "Consolidées:", &format!("{}", consolidated));
+        draw_label(&mut y, "Consolidées:", &format!("{}", m.consolidated_edges));
     }
 
-    let zm = &viz.sim.zone_manager;
-    if zm.num_zones() > 0 {
+    if m.num_zones > 0 {
         y += line_h * 0.5;
         draw_text("--- ZONES PID ---", x, y, 16.0, YELLOW);
         y += line_h * 1.2;
-        draw_label(&mut y, "Zones:", &format!("{}", zm.num_zones()));
-        draw_label(&mut y, "Act. moy.:", &format!("{:.4}", zm.global_activity_mean()));
-        draw_label(&mut y, "Err. PID:", &format!("{:.4}", zm.mean_pid_error()));
-        draw_label(&mut y, "Out. PID:", &format!("{:.4}", zm.mean_pid_output()));
-        let pid_mode = &viz.sim.config.zones.pid_mode;
-        draw_label(&mut y, "Mode PID:", pid_mode);
+        draw_label(&mut y, "Zones:", &format!("{}", m.num_zones));
+        draw_label(&mut y, "Act. moy.:", &format!("{:.4}", m.zone_activity_mean));
+        draw_label(&mut y, "Err. PID:", &format!("{:.4}", m.mean_pid_error));
+        draw_label(&mut y, "Out. PID:", &format!("{:.4}", m.mean_pid_output));
+        draw_label(&mut y, "Mode PID:", &m.pid_mode);
     }
 
-    // V3 : métriques E/I
-    {
-        let exc_count = nodes.iter().filter(|n| n.node_type == NeuronType::Excitatory).count();
-        let inh_count = nodes.iter().filter(|n| n.node_type == NeuronType::Inhibitory).count();
-        if inh_count > 0 {
-            y += line_h * 0.5;
-            draw_text("--- E/I ---", x, y, 16.0, YELLOW);
-            y += line_h * 1.2;
-            let active_e = nodes.iter().filter(|n| n.node_type == NeuronType::Excitatory && n.is_active()).count();
-            let active_i = nodes.iter().filter(|n| n.node_type == NeuronType::Inhibitory && n.is_active()).count();
-            draw_label(&mut y, "Excit. (actifs):", &format!("{} ({})", exc_count, active_e));
-            draw_label(&mut y, "Inhib. (actifs):", &format!("{} ({})", inh_count, active_i));
-            let e_energy: f64 = nodes.iter().filter(|n| n.node_type == NeuronType::Excitatory).map(|n| n.activation).sum();
-            let i_energy: f64 = nodes.iter().filter(|n| n.node_type == NeuronType::Inhibitory).map(|n| n.activation).sum();
-            draw_label(&mut y, "Énergie E:", &format!("{:.2}", e_energy));
-            draw_label(&mut y, "Énergie I:", &format!("{:.2}", i_energy));
-        }
+    // E/I metrics
+    if m.active_inhibitory > 0 || m.active_excitatory > 0 {
+        y += line_h * 0.5;
+        draw_text("--- E/I ---", x, y, 16.0, YELLOW);
+        y += line_h * 1.2;
+        draw_label(&mut y, "Excit. (actifs):", &format!("{}", m.active_excitatory));
+        draw_label(&mut y, "Inhib. (actifs):", &format!("{}", m.active_inhibitory));
+        draw_label(&mut y, "Énergie E:", &format!("{:.2}", m.excitatory_energy));
+        draw_label(&mut y, "Énergie I:", &format!("{:.2}", m.inhibitory_energy));
     }
 
-    // V4 : métriques dopamine et apprentissage
+    // V4 dopamine / training
     {
         y += line_h * 0.5;
         draw_text("--- V4 DOPAMINE ---", x, y, 16.0, YELLOW);
         y += line_h * 1.2;
-        draw_label(&mut y, "Dopa. level:", &format!("{:.3}", viz.sim.dopamine_system.level));
-        draw_label(&mut y, "Trial:", &format!("{}/{}", viz.sim.current_trial, viz.sim.trials.len()));
-        if viz.sim.total_evaluated > 0 {
-            let acc = viz.sim.correct_count as f64 / viz.sim.total_evaluated as f64 * 100.0;
-            draw_label(&mut y, "Accuracy:", &format!("{:.1}% ({}/{})", acc, viz.sim.correct_count, viz.sim.total_evaluated));
+        draw_label(&mut y, "Dopa. level:", &format!("{:.3}", m.dopamine_level));
+        draw_label(&mut y, "Trial:", &format!("{}/{}", m.current_trial, m.total_trials));
+        if m.total_evaluated > 0 {
+            let acc = m.accuracy * 100.0;
+            draw_label(&mut y, "Accuracy:", &format!("{:.1}% ({}/{})", acc, m.correct_count, m.total_evaluated));
         }
-        if let Some(dec) = viz.sim.last_decision {
+        if let Some(dec) = m.last_decision {
             draw_label(&mut y, "Last decision:", &format!("{}", dec));
         }
-        if let Some(tgt) = viz.sim.last_target {
+        if let Some(tgt) = m.last_target {
             draw_label(&mut y, "Last target:", &format!("{}", tgt));
         }
     }
@@ -578,7 +539,7 @@ fn draw_sidebar(viz: &VizState) {
         ("ESPACE", "Pause / Play"),
         ("→ ou N", "1 tick (pas à pas)"),
         ("↑ / ↓", "Vitesse ×2 / ÷2"),
-        ("1-2-3-4", "Vue: Act/Trace/Fat/Cond"),
+        ("1-2-3", "Vue: Act/Trace/Fat"),
         ("W/A/S/D", "Rotation 3D"),
         ("R", "Reset simulation"),
         ("Q / ESC", "Quitter"),
@@ -589,27 +550,21 @@ fn draw_sidebar(viz: &VizState) {
         y += line_h;
     }
 
-    // Mini sparkline énergie (dernières métriques)
+    // Energy sparkline
     y += line_h;
     draw_text("--- ÉNERGIE ---", x, y, 16.0, YELLOW);
     y += line_h;
-    let snapshots = &viz.sim.metrics.snapshots;
-    if snapshots.len() > 1 {
-        let n_points = snapshots.len().min(80);
-        let start = snapshots.len() - n_points;
-        let slice = &snapshots[start..];
-        let max_e = slice
-            .iter()
-            .map(|s| s.global_energy)
-            .fold(1.0_f64, f64::max);
+    if snap.energy_history.len() > 1 {
+        let n_points = snap.energy_history.len();
+        let max_e = snap.energy_history.iter().cloned().fold(1.0_f32, f32::max);
         let sparkline_w = SIDEBAR_W - 20.0;
         let sparkline_h = 60.0;
         draw_rectangle_lines(x, y, sparkline_w, sparkline_h, 1.0, DARKGRAY);
-        for i in 1..slice.len() {
+        for i in 1..n_points {
             let x0 = x + (i - 1) as f32 / n_points as f32 * sparkline_w;
             let x1 = x + i as f32 / n_points as f32 * sparkline_w;
-            let y0 = y + sparkline_h - (slice[i - 1].global_energy / max_e) as f32 * sparkline_h;
-            let y1 = y + sparkline_h - (slice[i].global_energy / max_e) as f32 * sparkline_h;
+            let y0 = y + sparkline_h - (snap.energy_history[i - 1] / max_e) * sparkline_h;
+            let y1 = y + sparkline_h - (snap.energy_history[i] / max_e) * sparkline_h;
             draw_line(x0, y0, x1, y1, 1.5, GREEN);
         }
     }

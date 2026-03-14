@@ -76,7 +76,7 @@ impl InputEncoder {
         }
         for &node_idx in &self.groups[class] {
             if node_idx < domain.nodes.len() {
-                domain.nodes[node_idx].inject_stimulus(intensity);
+                domain.nodes[node_idx].inject_stimulus(intensity as f32);
             }
         }
     }

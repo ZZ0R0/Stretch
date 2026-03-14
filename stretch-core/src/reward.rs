@@ -8,9 +8,9 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone)]
 pub struct RewardSystem {
     /// Reward courant r(t) ∈ [-1, +1]
-    pub current: f64,
+    pub current: f32,
     /// Reward cumulé depuis le début
-    pub cumulative: f64,
+    pub cumulative: f32,
     /// Nombre total de récompenses attribuées
     pub count: usize,
 }
@@ -49,7 +49,7 @@ impl RewardSystem {
 
     /// Attribuer un reward pour ce tick.
     pub fn set_reward(&mut self, reward: f64) {
-        self.current = reward.clamp(-1.0, 1.0);
+        self.current = (reward as f32).clamp(-1.0, 1.0);
         self.cumulative += self.current;
         self.count += 1;
     }

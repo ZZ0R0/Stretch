@@ -2,6 +2,7 @@ pub mod config;
 pub mod domain;
 pub mod dopamine;
 pub mod edge;
+pub mod gpu;
 pub mod input;
 pub mod metrics;
 pub mod node;

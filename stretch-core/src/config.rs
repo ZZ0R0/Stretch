@@ -12,7 +12,6 @@ pub struct SimConfig {
     pub node_defaults: NodeDefaults,
     pub edge_defaults: EdgeDefaults,
     pub propagation: PropagationConfig,
-    pub plasticity: PlasticityConfig,
     pub dissipation: DissipationConfig,
     pub simulation: SimulationParams,
     #[serde(default)]
@@ -50,6 +49,39 @@ pub struct SimConfig {
     /// V4 : interface de sortie
     #[serde(default)]
     pub output: OutputConfig,
+    /// V4.2 : compute backend configuration
+    #[serde(default)]
+    pub compute: ComputeConfig,
+}
+
+/// V4.2 : Compute backend configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ComputeConfig {
+    /// "auto" (try GPU, fall back to CPU), "cpu", or "gpu"
+    #[serde(default = "default_compute_backend")]
+    pub backend: String,
+    /// Workgroup size for GPU compute shaders
+    #[serde(default = "default_gpu_workgroup_size")]
+    pub gpu_workgroup_size: u32,
+}
+
+fn default_compute_backend() -> String { "auto".into() }
+fn default_gpu_workgroup_size() -> u32 { 256 }
+
+impl Default for ComputeConfig {
+    fn default() -> Self {
+        ComputeConfig {
+            backend: default_compute_backend(),
+            gpu_workgroup_size: default_gpu_workgroup_size(),
+        }
+    }
+}
+
+impl SimConfig {
+    /// Helper to get the backend preference string.
+    pub fn backend_pref(&self) -> &str {
+        &self.compute.backend
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -106,17 +138,7 @@ pub struct PropagationConfig {
     pub gain_inhibitory: f64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PlasticityConfig {
-    /// Taux de renforcement (Hebbian-like)
-    pub reinforcement_rate: f64,
-    /// Taux d'affaiblissement
-    pub weakening_rate: f64,
-    /// Seuil de co-activation pour renforcement
-    pub coactivation_threshold: f64,
-    /// Vitesse de décroissance des traces de co-activation
-    pub coactivity_decay: f64,
-}
+
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DissipationConfig {
@@ -423,12 +445,6 @@ impl Default for SimConfig {
                 gain: 0.15,
                 gain_inhibitory: 0.8,
             },
-            plasticity: PlasticityConfig {
-                reinforcement_rate: 0.01,
-                weakening_rate: 0.002,
-                coactivation_threshold: 0.2,
-                coactivity_decay: 0.05,
-            },
             dissipation: DissipationConfig {
                 activation_decay: 0.35,
                 fatigue_gain: 0.15,
@@ -463,6 +479,7 @@ impl Default for SimConfig {
             eligibility: EligibilityConfig::default(),
             input: InputConfig::default(),
             output: OutputConfig::default(),
+            compute: ComputeConfig::default(),
         }
     }
 }

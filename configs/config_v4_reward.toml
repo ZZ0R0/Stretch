@@ -128,3 +128,8 @@ start_node = 500
 read_delay = 10
 
 # Pas de stimuli classiques — l'injection se fait via l'input encoder
+
+# V4.2 : Compute backend
+[compute]
+backend = "auto"         # "auto" | "cpu" | "gpu"
+gpu_workgroup_size = 256

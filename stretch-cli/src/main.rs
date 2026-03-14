@@ -3,7 +3,7 @@ use std::fs;
 
 use stretch_core::config::SimConfig;
 use stretch_core::metrics::MetricsLog;
-use stretch_core::simulation::{self, Simulation, NullObserver, SimulationObserver};
+use stretch_core::simulation::{self, Simulation, NullObserver};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -29,8 +29,20 @@ fn main() {
         SimConfig::default()
     };
 
-    // V4 : lancement en mode entraînement avec trials
-    let result = run_v4_training(&config);
+    // V4 : lancement en mode entraînement avec trials, via run_with_observer
+    let mut sim = Simulation::new(config.clone());
+    let n_trials = sim.setup_v4_training();
+
+    // Spatial diagnostics
+    print_spatial_diagnostics(&sim);
+
+    let trial_period = if n_trials > 1 {
+        sim.trials[1].start_tick - sim.trials[0].start_tick
+    } else { 0 };
+    println!("[V4 Training] {} trials programmés ({} classes, période={})", n_trials, config.input.num_classes, trial_period);
+
+    let mut observer = NullObserver;
+    let result = simulation::run_simulation_loop(sim, &mut observer);
 
     // Export métriques JSON
     let json =
@@ -60,15 +72,15 @@ fn main() {
     println!("Traces nœuds exportées dans : node_traces.json");
 
     // Conductance statistics
-    let conds: Vec<f64> = result.domain.edges.iter().map(|e| e.conductance).collect();
+    let conds: Vec<f32> = result.domain.edges.iter().map(|e| e.conductance).collect();
     let n_edges = conds.len();
-    let mean_c = conds.iter().sum::<f64>() / n_edges as f64;
-    let min_c = conds.iter().cloned().fold(f64::INFINITY, f64::min);
-    let max_c = conds.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+    let mean_c = conds.iter().sum::<f32>() / n_edges as f32;
+    let min_c = conds.iter().cloned().fold(f32::INFINITY, f32::min);
+    let max_c = conds.iter().cloned().fold(f32::NEG_INFINITY, f32::max);
     let above = conds.iter().filter(|&&c| c > 1.05).count();
     let below = conds.iter().filter(|&&c| c < 0.95).count();
-    let elig: Vec<f64> = result.domain.edges.iter().map(|e| e.eligibility).collect();
-    let max_e = elig.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+    let elig: Vec<f32> = result.domain.edges.iter().map(|e| e.eligibility).collect();
+    let max_e = elig.iter().cloned().fold(f32::NEG_INFINITY, f32::max);
     let nonzero_e = elig.iter().filter(|&&e| e.abs() > 1e-6).count();
     println!("\n=== Conductance Stats ===");
     println!("  n_edges: {}, mean: {:.6}, min: {:.6}, max: {:.6}", n_edges, mean_c, min_c, max_c);
@@ -106,15 +118,7 @@ fn main() {
     }
 }
 
-/// V4 : Entraînement par trials — génère une séquence d'essais alternés classe 0/1
-/// et exécute la simulation avec le protocole reward.
-fn run_v4_training(config: &SimConfig) -> simulation::SimulationResult {
-    let mut sim = Simulation::new(config.clone());
-
-    // V4 : setup spatial I/O + trials via méthode partagée
-    let n_trials = sim.setup_v4_training();
-
-    // Spatial diagnostics
+fn print_spatial_diagnostics(sim: &Simulation) {
     if let (Some(ref enc), Some(ref reader)) = (&sim.input_encoder, &sim.output_reader) {
         let d = &sim.domain;
         let groups: [(&Vec<usize>, &str); 4] = [
@@ -149,61 +153,4 @@ fn run_v4_training(config: &SimConfig) -> simulation::SimulationResult {
             }
         }
     }
-
-    let trial_period = if n_trials > 1 {
-        sim.trials[1].start_tick - sim.trials[0].start_tick
-    } else { 0 };
-    println!("[V4 Training] {} trials programmés ({} classes, période={})", n_trials, config.input.num_classes, trial_period);
-
-    // Exécuter avec observer nul
-    let mut observer = NullObserver;
-    let t_start = std::time::Instant::now();
-    observer.on_init(&sim.domain, config);
-
-    let ticks_label = if sim.total_ticks() == 0 { "∞".to_string() } else { sim.total_ticks().to_string() };
-    println!(
-        "=== Simulation V4 [dopamine+reward] ===\nTopologie: {} | Nœuds: {}, Liaisons: {}, Ticks: {} | Zones: {}",
-        config.domain.topology,
-        sim.domain.num_nodes(),
-        sim.domain.num_edges(),
-        ticks_label,
-        sim.zone_manager.num_zones()
-    );
-
-    while !sim.finished {
-        let tick = sim.tick;
-        let tick_metrics = sim.step();
-
-        let keep_going = observer.on_tick(tick, &sim.domain, &tick_metrics);
-        if !keep_going { break; }
-
-        if tick % 100 == 0 {
-            let acc_str = if sim.total_evaluated > 0 {
-                format!(" | accuracy: {:.1}% ({}/{})", sim.accuracy() * 100.0, sim.correct_count, sim.total_evaluated)
-            } else {
-                String::new()
-            };
-            eprintln!(
-                "  tick {:>5} | actifs: {:>5} | énergie: {:.3} | dopa: {:.3}{} | {:.1}ms/tick",
-                tick, tick_metrics.active_nodes, tick_metrics.global_energy,
-                sim.dopamine_system.level,
-                acc_str,
-                t_start.elapsed().as_secs_f64() * 1000.0 / (tick + 1) as f64
-            );
-        }
-    }
-
-    let active_final = sim.domain.nodes.iter().filter(|n| n.is_active()).count();
-    let energy_final: f64 = sim.domain.nodes.iter().map(|n| n.activation).sum();
-    println!("\n=== Fin simulation V4 ===");
-    println!("  Nœuds actifs finaux : {}", active_final);
-    println!("  Énergie finale      : {:.4}", energy_final);
-    if sim.total_evaluated > 0 {
-        println!("  Accuracy finale     : {:.1}% ({}/{})", sim.accuracy() * 100.0, sim.correct_count, sim.total_evaluated);
-    }
-    println!("  Dopamine finale     : {:.4}", sim.dopamine_system.level);
-    println!("  Récompense cumulée  : {:.4}", sim.reward_system.cumulative);
-
-    observer.on_finish(&sim.domain, &sim.metrics);
-    sim.into_result()
 }

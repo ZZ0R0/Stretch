@@ -11,6 +11,7 @@ pub enum Phase {
     Plasticity = 4,
     ReadoutReward = 5,
     Metrics = 6,
+    GpuTick = 7,
 }
 
 impl Phase {
@@ -23,10 +24,11 @@ impl Phase {
             Phase::Plasticity => "PLAST+STDP",
             Phase::ReadoutReward => "readout+rew",
             Phase::Metrics => "metrics",
+            Phase::GpuTick => "GPU_TICK",
         }
     }
 
-    pub const ALL: [Phase; 7] = [
+    pub const ALL: [Phase; 8] = [
         Phase::Zones,
         Phase::StimInput,
         Phase::Propagation,
@@ -34,6 +36,7 @@ impl Phase {
         Phase::Plasticity,
         Phase::ReadoutReward,
         Phase::Metrics,
+        Phase::GpuTick,
     ];
 }
 
@@ -81,7 +84,7 @@ impl PhaseStats {
 ///     // ... more phases ...
 ///     monitor.end_tick(tick);
 pub struct PerfMonitor {
-    stats: [PhaseStats; 7],
+    stats: [PhaseStats; 8],
     tick_start: Instant,
     phase_start: Instant,
     report_interval: usize,

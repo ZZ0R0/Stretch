@@ -1,8 +1,11 @@
 use rayon::prelude::*;
 
+use std::sync::Arc;
+
 use crate::config::SimConfig;
 use crate::domain::Domain;
 use crate::dopamine::DopamineSystem;
+use crate::gpu::{GpuContext, GpuParams};
 use crate::input::InputEncoder;
 use crate::metrics::{MetricsLog, TickMetrics};
 use crate::output::OutputReader;
@@ -13,6 +16,70 @@ use crate::reward::RewardSystem;
 use crate::stdp;
 use crate::stimulus;
 use crate::zone::ZoneManager;
+
+/// Compute backend: CPU (default) or GPU (wgpu).
+pub enum ComputeBackend {
+    Cpu,
+    Gpu(GpuContext),
+}
+
+// ---------------------------------------------------------------------------
+// VizSnapshot – lightweight render-only data for the visualization
+// ---------------------------------------------------------------------------
+
+/// Aggregated metrics for the sidebar (no per-node iteration needed).
+#[derive(Clone)]
+pub struct VizMetrics {
+    pub active_count: usize,
+    pub total_energy: f32,
+    pub max_activation: f32,
+    pub mean_conductance: f32,
+    pub max_conductance: f32,
+    pub mean_trace: f32,
+    pub max_trace: f32,
+    pub mean_fatigue: f32,
+    pub dopamine_level: f32,
+    pub current_trial: usize,
+    pub total_trials: usize,
+    pub correct_count: usize,
+    pub total_evaluated: usize,
+    pub accuracy: f32,
+    pub last_decision: Option<usize>,
+    pub last_target: Option<usize>,
+    pub consolidated_edges: usize,
+    pub excitatory_energy: f32,
+    pub inhibitory_energy: f32,
+    pub active_excitatory: usize,
+    pub active_inhibitory: usize,
+    pub num_zones: usize,
+    pub zone_activity_mean: f64,
+    pub mean_pid_error: f64,
+    pub mean_pid_output: f64,
+    pub pid_mode: String,
+}
+
+/// Lightweight snapshot for visualization — contains only rendering data.
+#[derive(Clone)]
+pub struct VizSnapshot {
+    pub tick: usize,
+    pub finished: bool,
+    /// 3D positions (constant after init, shared via Arc).
+    pub positions: Arc<Vec<[f64; 3]>>,
+    /// Per-node activation values (updated from GPU/CPU state).
+    pub activations: Vec<f32>,
+    /// Per-node memory trace (for trace view mode).
+    pub memory_traces: Vec<f32>,
+    /// Per-node fatigue (for fatigue view mode).
+    pub fatigues: Vec<f32>,
+    /// Per-node neuron type: true = excitatory.
+    pub is_excitatory: Arc<Vec<bool>>,
+    /// Indices of active nodes (activation > threshold).
+    pub active_indices: Vec<usize>,
+    /// Aggregated sidebar metrics.
+    pub metrics: VizMetrics,
+    /// Sparkline data (last N snapshots' global_energy).
+    pub energy_history: Vec<f32>,
+}
 
 /// Initialiser le pool de threads rayon en détectant automatiquement le nombre de cœurs.
 pub fn init_thread_pool() {
@@ -40,6 +107,28 @@ pub trait SimulationObserver {
 
 pub struct NullObserver;
 impl SimulationObserver for NullObserver {}
+
+// ---------------------------------------------------------------------------
+// Abstraction traits (E3) — enable future interchangeable backends / rules
+// ---------------------------------------------------------------------------
+
+/// Compute backend abstraction.
+pub trait ComputeEngine {
+    fn compute_influences(&self, domain: &Domain, source_contribs: &[f64], out: &mut [f64]);
+    fn update_plasticity(&self, domain: &mut Domain, tick: usize, config: &SimConfig);
+    fn normalize_budget(&self, domain: &mut Domain, budget: f64);
+}
+
+/// Plasticity rule abstraction (STDP, Hebbian, or future).
+pub trait PlasticityRule {
+    fn update(&self, domain: &mut Domain, tick: usize, config: &SimConfig);
+}
+
+/// Experimental protocol abstraction.
+pub trait ExperimentProtocol {
+    fn next_trial(&mut self, tick: usize) -> Option<Trial>;
+    fn evaluate(&mut self, decision: usize, target: usize) -> f64;
+}
 
 // ---------------------------------------------------------------------------
 // V4 Training trial
@@ -76,11 +165,14 @@ pub struct Simulation {
     pub total_evaluated: usize,
     pub reward_center: Option<[f64; 3]>,
     // --- Performance: reusable buffers (avoid allocation per tick) ---
-    buf_source_contribs: Vec<f64>,
-    buf_influences: Vec<f64>,
+    buf_source_contribs: Vec<f32>,
+    buf_influences: Vec<f32>,
+    buf_fired_list: Vec<usize>,
     buf_activation_ticks: Vec<Option<usize>>,
-    buf_node_delta_dopa: Vec<f64>,
+    buf_node_delta_dopa: Vec<f32>,
     cached_dopa_center: Option<[f64; 3]>,
+    // --- Compute backend ---
+    pub backend: ComputeBackend,
     // --- Monitoring ---
     pub perf: PerfMonitor,
 }
@@ -119,6 +211,32 @@ impl Simulation {
         let n_nodes = domain.num_nodes();
         let perf = PerfMonitor::new(100); // report every 100 ticks
 
+        // Attempt GPU initialization if backend = "auto" or "gpu"
+        let backend_pref = config.backend_pref();
+        let backend = match backend_pref {
+            "cpu" => {
+                eprintln!("[Stretch] Compute backend: CPU (forced)");
+                ComputeBackend::Cpu
+            }
+            _ => {
+                // "auto" or "gpu"
+                match GpuContext::try_new(&domain, &config, &zone_manager) {
+                    Some(gpu) => {
+                        eprintln!("[Stretch] Compute backend: GPU");
+                        ComputeBackend::Gpu(gpu)
+                    }
+                    None => {
+                        if backend_pref == "gpu" {
+                            eprintln!("[Stretch] WARNING: GPU requested but unavailable, falling back to CPU");
+                        } else {
+                            eprintln!("[Stretch] Compute backend: CPU (no GPU adapter found)");
+                        }
+                        ComputeBackend::Cpu
+                    }
+                }
+            }
+        };
+
         Simulation {
             domain,
             metrics: MetricsLog::new(),
@@ -139,9 +257,11 @@ impl Simulation {
             reward_center: None,
             buf_source_contribs: vec![0.0; n_nodes],
             buf_influences: vec![0.0; n_nodes],
+            buf_fired_list: Vec::with_capacity(n_nodes / 20), // ~5% active expected
             buf_activation_ticks: vec![None; n_nodes],
             buf_node_delta_dopa: Vec::new(),
             cached_dopa_center: None,
+            backend,
             perf,
         }
     }
@@ -200,6 +320,22 @@ impl Simulation {
 
         let n_trials = trials.len();
         self.schedule_trials(trials);
+
+        // Upload I/O groups to GPU if available
+        if let ComputeBackend::Gpu(ref gpu) = self.backend {
+            let stim_groups: Vec<Vec<usize>> = self.input_encoder.as_ref()
+                .map(|e| e.groups.clone()).unwrap_or_default();
+            let read_groups: Vec<Vec<usize>> = self.output_reader.as_ref()
+                .map(|r| r.groups.clone()).unwrap_or_default();
+            gpu.upload_io_groups(&stim_groups, &read_groups);
+
+            // KdTree no longer needed (spatial queries done above), drop CPU-only structures
+            self.domain.compact_for_gpu();
+        } else {
+            // CPU mode: only drop kdtree (not needed after spatial setup)
+            self.domain.drop_kdtree();
+        }
+
         n_trials
     }
 
@@ -211,12 +347,324 @@ impl Simulation {
         if self.total_evaluated == 0 { 0.0 } else { self.correct_count as f64 / self.total_evaluated as f64 }
     }
 
-    /// V4 : Exécuter un seul tick (optimized).
+    /// Build a lightweight snapshot for visualization.
+    /// For GPU backend, downloads node state from GPU.
+    /// Call once per render frame, not every sim tick.
+    pub fn build_viz_snapshot(&self, positions: &Arc<Vec<[f64; 3]>>, is_excitatory: &Arc<Vec<bool>>) -> VizSnapshot {
+        // Get per-node data (GPU readback or CPU direct)
+        let (activations, memory_traces, fatigues) = match &self.backend {
+            ComputeBackend::Gpu(gpu) => {
+                let gpu_nodes = gpu.download_nodes();
+                let acts: Vec<f32> = gpu_nodes.iter().map(|n| n.activation).collect();
+                let traces: Vec<f32> = gpu_nodes.iter().map(|n| n.memory_trace).collect();
+                let fats: Vec<f32> = gpu_nodes.iter().map(|n| n.fatigue).collect();
+                (acts, traces, fats)
+            }
+            ComputeBackend::Cpu => {
+                let acts: Vec<f32> = self.domain.nodes.iter().map(|n| n.activation).collect();
+                let traces: Vec<f32> = self.domain.nodes.iter().map(|n| n.memory_trace).collect();
+                let fats: Vec<f32> = self.domain.nodes.iter().map(|n| n.fatigue).collect();
+                (acts, traces, fats)
+            }
+        };
+
+        // Active indices (for culling)
+        let active_indices: Vec<usize> = activations.iter().enumerate()
+            .filter(|(_, &a)| a > 0.01)
+            .map(|(i, _)| i)
+            .collect();
+
+        // Sidebar metrics from last TickMetrics snapshot
+        let last_tm = self.metrics.snapshots.last();
+        let metrics = VizMetrics {
+            active_count: last_tm.map_or(0, |m| m.active_nodes),
+            total_energy: last_tm.map_or(0.0, |m| m.global_energy),
+            max_activation: last_tm.map_or(0.0, |m| m.max_activation),
+            mean_conductance: last_tm.map_or(0.0, |m| m.mean_conductance),
+            max_conductance: last_tm.map_or(0.0, |m| m.max_conductance),
+            mean_trace: last_tm.map_or(0.0, |m| m.mean_memory_trace),
+            max_trace: last_tm.map_or(0.0, |m| m.max_memory_trace),
+            mean_fatigue: last_tm.map_or(0.0, |m| m.mean_fatigue),
+            dopamine_level: self.dopamine_system.level,
+            current_trial: self.current_trial,
+            total_trials: self.trials.len(),
+            correct_count: self.correct_count,
+            total_evaluated: self.total_evaluated,
+            accuracy: self.accuracy() as f32,
+            last_decision: self.last_decision,
+            last_target: self.last_target,
+            consolidated_edges: last_tm.map_or(0, |m| m.consolidated_edges),
+            excitatory_energy: last_tm.map_or(0.0, |m| m.excitatory_energy),
+            inhibitory_energy: last_tm.map_or(0.0, |m| m.inhibitory_energy),
+            active_excitatory: last_tm.map_or(0, |m| m.active_excitatory),
+            active_inhibitory: last_tm.map_or(0, |m| m.active_inhibitory),
+            num_zones: self.zone_manager.num_zones(),
+            zone_activity_mean: self.zone_manager.global_activity_mean(),
+            mean_pid_error: self.zone_manager.mean_pid_error(),
+            mean_pid_output: self.zone_manager.mean_pid_output(),
+            pid_mode: self.config.zones.pid_mode.clone(),
+        };
+
+        // Energy sparkline history
+        let n_points = self.metrics.snapshots.len().min(80);
+        let start = self.metrics.snapshots.len() - n_points;
+        let energy_history: Vec<f32> = self.metrics.snapshots[start..]
+            .iter()
+            .map(|s| s.global_energy)
+            .collect();
+
+        VizSnapshot {
+            tick: self.tick,
+            finished: self.finished,
+            positions: Arc::clone(positions),
+            activations,
+            memory_traces,
+            fatigues,
+            is_excitatory: Arc::clone(is_excitatory),
+            active_indices,
+            metrics,
+            energy_history,
+        }
+    }
+
+    /// V4 : Exécuter un seul tick (GPU-first or CPU fallback).
     pub fn step(&mut self) -> TickMetrics {
         let tick = self.tick;
-        let config = &self.config;
 
         self.perf.begin_tick();
+
+        match &self.backend {
+            ComputeBackend::Gpu(_) => self.step_gpu(tick),
+            ComputeBackend::Cpu => self.step_cpu(tick),
+        }
+
+        // === Métriques ===
+        let snap_interval = self.config.simulation.snapshot_interval.max(1);
+        if tick % snap_interval == 0 {
+            if let ComputeBackend::Gpu(ref gpu) = self.backend {
+                // GPU path: fast metrics reduction (64 bytes readback instead of full state)
+                let gm = gpu.compute_gpu_metrics();
+                self.metrics.record_from_gpu(
+                    tick,
+                    &gm,
+                    &self.zone_manager,
+                    self.reward_system.cumulative,
+                    self.dopamine_system.level,
+                    self.last_decision,
+                    self.accuracy(),
+                );
+            } else {
+                self.metrics.record(
+                    tick,
+                    &self.domain,
+                    &self.zone_manager,
+                    self.reward_system.cumulative,
+                    self.dopamine_system.level,
+                    self.last_decision,
+                    self.accuracy(),
+                );
+            }
+        }
+        let tick_metrics = self.metrics.snapshots.last().cloned().unwrap_or(TickMetrics {
+            tick,
+            active_nodes: 0,
+            global_energy: 0.0,
+            max_activation: 0.0,
+            mean_conductance: 0.0,
+            max_conductance: 0.0,
+            mean_memory_trace: 0.0,
+            max_memory_trace: 0.0,
+            mean_fatigue: 0.0,
+            consolidated_edges: 0,
+            num_zones: 0,
+            mean_pid_error: 0.0,
+            mean_pid_output: 0.0,
+            zone_activity_mean: 0.0,
+            active_excitatory: 0,
+            active_inhibitory: 0,
+            excitatory_energy: 0.0,
+            inhibitory_energy: 0.0,
+            current_reward: 0.0,
+            cumulative_reward: 0.0,
+            dopamine_level: 0.0,
+            mean_eligibility: 0.0,
+            output_decision: None,
+            accuracy: 0.0,
+        });
+
+        self.perf.end_phase(Phase::Metrics);
+        self.perf.end_tick(tick);
+
+        self.tick += 1;
+        if self.config.simulation.total_ticks > 0 && self.tick >= self.config.simulation.total_ticks {
+            self.finished = true;
+        }
+
+        tick_metrics
+    }
+
+    /// GPU-first path: entire pipeline runs on GPU in a single submit.
+    fn step_gpu(&mut self, tick: usize) {
+        let config = &self.config;
+
+        // --- Determine trial state ---
+        let mut stimulus_class: i32 = -1;
+        let mut reset_activations = false;
+        let mut need_readout = false;
+
+        if self.current_trial < self.trials.len() {
+            let trial = &self.trials[self.current_trial];
+            if tick == trial.start_tick {
+                reset_activations = true;
+            }
+            if tick >= trial.start_tick && tick < trial.start_tick + trial.presentation_ticks {
+                stimulus_class = trial.class as i32;
+                self.last_target = Some(trial.class);
+            }
+            let read_tick = trial.start_tick + trial.presentation_ticks + trial.read_delay;
+            if tick == read_tick {
+                need_readout = true;
+            }
+        }
+
+        // --- Upload spatial dopamine if reward center changed ---
+        if let Some(center) = self.reward_center {
+            if self.cached_dopa_center.as_ref() != Some(&center) {
+                stdp::precompute_spatial_dopamine(
+                    &self.domain.positions,
+                    center,
+                    1.0,
+                    config.dopamine.spatial_lambda,
+                    &mut self.buf_node_delta_dopa,
+                );
+                self.cached_dopa_center = Some(center);
+                if let ComputeBackend::Gpu(ref gpu) = self.backend {
+                    gpu.upload_node_delta_dopa(&self.buf_node_delta_dopa);
+                }
+            }
+        }
+
+        // --- Build GpuParams ---
+        let dopa_phasic = self.dopamine_system.level - self.dopamine_system.tonic;
+        let gpu_params = GpuParams {
+            num_nodes: self.domain.num_nodes() as u32,
+            num_edges: self.domain.num_edges() as u32,
+            current_tick: tick as u32,
+            propagation_gain: config.propagation.gain as f32,
+            gain_inhibitory: config.propagation.gain_inhibitory as f32,
+            activation_decay: config.dissipation.activation_decay as f32,
+            activation_min: config.dissipation.activation_min as f32,
+            fatigue_gain: config.dissipation.fatigue_gain as f32,
+            fatigue_recovery: config.dissipation.fatigue_recovery as f32,
+            inhibition_gain: config.dissipation.inhibition_gain as f32,
+            inhibition_decay: config.dissipation.inhibition_decay as f32,
+            trace_gain: config.dissipation.trace_gain as f32,
+            trace_decay: config.dissipation.trace_decay as f32,
+            decay_jitter: config.dissipation.decay_jitter as f32,
+            a_plus: config.stdp.a_plus as f32,
+            a_minus: config.stdp.a_minus as f32,
+            tau_plus: config.stdp.tau_plus as f32,
+            tau_minus: config.stdp.tau_minus as f32,
+            elig_decay: config.eligibility.decay as f32,
+            elig_max: config.eligibility.max as f32,
+            plasticity_gain: config.dopamine.plasticity_gain as f32,
+            global_delta_dopa: dopa_phasic,
+            dopa_phasic: dopa_phasic,
+            use_spatial: if self.reward_center.is_some() { 1 } else { 0 },
+            spatial_lambda: config.dopamine.spatial_lambda as f32,
+            cond_min: config.edge_defaults.conductance_min as f32,
+            cond_max: config.edge_defaults.conductance_max as f32,
+            homeostatic_rate: config.edge_defaults.decay as f32,
+            baseline_cond: config.edge_defaults.conductance as f32,
+            dopamine_level: self.dopamine_system.level,
+            dopa_consol_threshold: config.dopamine.consolidation_threshold as f32,
+            consol_conductance_threshold: config.consolidation.threshold as f32,
+            consol_ticks_required: config.consolidation.ticks_required as u32,
+            budget: config.synaptic_budget.budget as f32,
+            stimulus_class,
+            stimulus_intensity: config.input.intensity as f32,
+            num_zones: config.zones.num_zones as u32,
+            zone_kp: config.zones.kp as f32,
+            zone_ki: config.zones.ki as f32,
+            zone_kd: config.zones.kd as f32,
+            zone_pid_output_max: config.zones.pid_output_max as f32,
+            zone_pid_integral_max: config.zones.pid_integral_max as f32,
+            zone_k_theta: config.zones.k_theta as f32,
+            zone_k_gain: config.zones.k_gain as f32,
+            stimulus_group_size: config.input.group_size as u32,
+            _pad0: 0,
+            _pad1: 0,
+            _pad2: 0,
+        };
+
+        // --- Single GPU submit ---
+        if let ComputeBackend::Gpu(ref gpu) = self.backend {
+            gpu.run_full_tick(&gpu_params, need_readout, reset_activations);
+        }
+
+        self.perf.end_phase(Phase::GpuTick);
+
+        // --- Dopamine decay ---
+        self.dopamine_system.update(0.0, &config.dopamine);
+
+        // --- Readout + reward ---
+        if need_readout {
+            if let ComputeBackend::Gpu(ref gpu) = self.backend {
+                let scores = gpu.read_readout_scores(config.input.num_classes);
+                let decision = scores.iter().enumerate()
+                    .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
+                    .map(|(i, _)| i)
+                    .unwrap_or(0);
+                self.last_decision = Some(decision);
+
+                if self.total_evaluated > 0 && self.total_evaluated % 10 == 0 {
+                    eprintln!("  [GPU t={} trial={}] target={} dec={} scores={:?}",
+                        tick, self.current_trial, self.last_target.unwrap_or(99), decision, scores);
+                }
+
+                if let Some(target) = self.last_target {
+                    self.total_evaluated += 1;
+                    let correct = decision == target;
+                    if correct { self.correct_count += 1; }
+
+                    let reward_val = if correct {
+                        config.reward.reward_positive
+                    } else {
+                        config.reward.reward_negative
+                    };
+                    self.reward_system.set_reward(reward_val);
+                    self.dopamine_system.update(reward_val, &config.dopamine);
+
+                    if config.dopamine.spatial_lambda > 0.0 {
+                        let focus_group_idx = if correct { target } else { decision };
+                        if let Some(ref reader_ref) = self.output_reader {
+                            let focus_group = &reader_ref.groups[focus_group_idx];
+                            let n = focus_group.len() as f64;
+                            if n > 0.0 {
+                                let (mut cx, mut cy, mut cz) = (0.0_f64, 0.0_f64, 0.0_f64);
+                                for &idx in focus_group {
+                                    let p = self.domain.positions[idx];
+                                    cx += p[0]; cy += p[1]; cz += p[2];
+                                }
+                                self.reward_center = Some([cx / n, cy / n, cz / n]);
+                            }
+                        }
+                    } else {
+                        self.reward_center = None;
+                    }
+                }
+
+                self.current_trial += 1;
+            }
+        }
+
+        self.reward_system.clear();
+        self.perf.end_phase(Phase::ReadoutReward);
+    }
+
+    /// CPU fallback path: original hybrid step logic (no GPU).
+    fn step_cpu(&mut self, tick: usize) {
+        let config = &self.config;
 
         // === Phase 0+1 : Zones + PID ===
         self.zone_manager.measure(&self.domain);
@@ -225,7 +673,6 @@ impl Simulation {
         self.perf.end_phase(Phase::Zones);
 
         // === Phase 2 : Stimuli + pacemakers ===
-        // Stimuli classiques ignorés si InputEncoder actif (V4)
         if self.input_encoder.as_ref().map_or(true, |e| e.groups.is_empty()) {
             stimulus::inject_stimuli(&mut self.domain, &config.stimuli, tick);
         }
@@ -251,46 +698,56 @@ impl Simulation {
 
         self.perf.end_phase(Phase::StimInput);
 
-        // === Phase 4 : Propagation (cached kernels, reused buffers) ===
+        // === Phase 4 : Propagation (CPU only) ===
         propagation::compute_source_contribs(
             &self.domain,
             &config.propagation,
             &self.zone_manager.gain_mods,
             &mut self.buf_source_contribs,
+            &mut self.buf_fired_list,
         );
-        propagation::compute_influences_csr(
+
+        propagation::compute_influences_fired_only(
             &self.domain,
             &self.buf_source_contribs,
+            &self.buf_fired_list,
             &mut self.buf_influences,
         );
         propagation::apply_influences(&mut self.domain, &self.buf_influences);
 
         self.perf.end_phase(Phase::Propagation);
 
-        // === Phase 5 : Dissipation parallèle ===
+        // === Phase 5 : Dissipation parallèle (C5: skip equilibrium nodes) ===
         {
-            let base_decay = config.dissipation.activation_decay;
-            let jitter = config.dissipation.decay_jitter;
-            let activation_min = config.dissipation.activation_min;
-            let fatigue_gain = config.dissipation.fatigue_gain;
-            let fatigue_recovery = config.dissipation.fatigue_recovery;
-            let inhibition_gain = config.dissipation.inhibition_gain;
-            let inhibition_decay_rate = config.dissipation.inhibition_decay;
-            let trace_gain = config.dissipation.trace_gain;
-            let trace_decay = config.dissipation.trace_decay;
+            let base_decay = config.dissipation.activation_decay as f32;
+            let jitter = config.dissipation.decay_jitter as f32;
+            let activation_min = config.dissipation.activation_min as f32;
+            let fatigue_gain = config.dissipation.fatigue_gain as f32;
+            let fatigue_recovery = config.dissipation.fatigue_recovery as f32;
+            let inhibition_gain = config.dissipation.inhibition_gain as f32;
+            let inhibition_decay_rate = config.dissipation.inhibition_decay as f32;
+            let trace_gain = config.dissipation.trace_gain as f32;
+            let trace_decay = config.dissipation.trace_decay as f32;
             let jitter_seed = tick as u64;
 
             self.domain
                 .nodes
                 .par_iter_mut()
+                .zip(self.domain.node_needs_update.par_iter_mut())
                 .enumerate()
-                .for_each(|(i, node)| {
+                .for_each(|(i, (node, needs_update))| {
+                    if !*needs_update && !node.is_active()
+                        && node.fatigue < 0.01 && node.inhibition < 0.01
+                    {
+                        return;
+                    }
+
                     let effective_decay = if jitter > 0.0 {
                         let h = (i as u64)
                             .wrapping_mul(6364136223846793005)
                             .wrapping_add(jitter_seed)
                             .wrapping_mul(1442695040888963407);
-                        let j = ((h >> 33) as f64 / (1u64 << 31) as f64 - 1.0) * jitter;
+                        let j = ((h >> 33) as f32 / (1u64 << 31) as f32 - 1.0) * jitter;
                         (base_decay * (1.0 + j)).clamp(0.0, 1.0)
                     } else {
                         base_decay
@@ -300,6 +757,10 @@ impl Simulation {
                     node.update_trace(trace_gain, trace_decay);
                     node.update_excitability_from_trace();
                     node.decay_activation(effective_decay, activation_min);
+
+                    *needs_update = node.is_active()
+                        || node.fatigue > 0.01
+                        || node.inhibition > 0.01;
                 });
         }
 
@@ -308,9 +769,9 @@ impl Simulation {
         // === Phase 5b : Décroissance naturelle dopamine ===
         self.dopamine_system.update(0.0, &config.dopamine);
 
-        // === Phase 6 : Plasticité + STDP + éligibilité + dopamine (with reusable buffers) ===
+        // === Phase 6 : Plasticité (CPU) ===
         {
-            let dopamine_level = self.dopamine_system.level;
+            let dopamine_level = self.dopamine_system.level as f64;
             let reward_center = self.reward_center;
             stdp::update_plasticity_stdp_budget(
                 &mut self.domain,
@@ -329,7 +790,6 @@ impl Simulation {
             );
         }
 
-        // Sync conductance cache after plasticity modified edges
         self.domain.sync_conductances();
 
         self.perf.end_phase(Phase::Plasticity);
@@ -364,7 +824,7 @@ impl Simulation {
                         self.reward_system.set_reward(reward_val);
                         self.dopamine_system.update(reward_val, &config.dopamine);
 
-                        if config.dopamine.spatial_lambda > 0.0 && config.dopamine.spatial_lambda > 0.0 {
+                        if config.dopamine.spatial_lambda > 0.0 {
                             let focus_group_idx = if correct { target } else { result.decision };
                             if let Some(ref reader_ref) = self.output_reader {
                                 let focus_group = &reader_ref.groups[focus_group_idx];
@@ -375,7 +835,7 @@ impl Simulation {
                                         let p = self.domain.positions[idx];
                                         cx += p[0]; cy += p[1]; cz += p[2];
                                     }
-                                    self.reward_center = Some([cx/n, cy/n, cz/n]);
+                                    self.reward_center = Some([cx / n, cy / n, cz / n]);
                                 }
                             }
                         } else {
@@ -391,56 +851,6 @@ impl Simulation {
         self.reward_system.clear();
 
         self.perf.end_phase(Phase::ReadoutReward);
-
-        // === Phase 9 : Métriques ===
-        let snap_interval = config.simulation.snapshot_interval.max(1);
-        if tick % snap_interval == 0 {
-            self.metrics.record(
-                tick,
-                &self.domain,
-                &self.zone_manager,
-                self.reward_system.cumulative,
-                self.dopamine_system.level,
-                self.last_decision,
-                self.accuracy(),
-            );
-        }
-        let tick_metrics = self.metrics.snapshots.last().cloned().unwrap_or(TickMetrics {
-            tick,
-            active_nodes: 0,
-            global_energy: 0.0,
-            max_activation: 0.0,
-            mean_conductance: 0.0,
-            max_conductance: 0.0,
-            mean_memory_trace: 0.0,
-            max_memory_trace: 0.0,
-            mean_fatigue: 0.0,
-            consolidated_edges: 0,
-            num_zones: 0,
-            mean_pid_error: 0.0,
-            mean_pid_output: 0.0,
-            zone_activity_mean: 0.0,
-            active_excitatory: 0,
-            active_inhibitory: 0,
-            excitatory_energy: 0.0,
-            inhibitory_energy: 0.0,
-            current_reward: 0.0,
-            cumulative_reward: 0.0,
-            dopamine_level: 0.0,
-            mean_eligibility: 0.0,
-            output_decision: None,
-            accuracy: 0.0,
-        });
-
-        self.perf.end_phase(Phase::Metrics);
-        self.perf.end_tick(tick);
-
-        self.tick += 1;
-        if config.simulation.total_ticks > 0 && self.tick >= config.simulation.total_ticks {
-            self.finished = true;
-        }
-
-        tick_metrics
     }
 
     pub fn into_result(self) -> SimulationResult {
@@ -506,10 +916,15 @@ pub fn run_with_observer(config: &SimConfig, observer: &mut dyn SimulationObserv
         }
     }
 
+    // Final GPU → CPU sync for accurate end-of-simulation stats
+    if let ComputeBackend::Gpu(ref gpu) = sim.backend {
+        gpu.sync_state_to_domain(&mut sim.domain);
+    }
+
     let active_final = sim.domain.nodes.iter().filter(|n| n.is_active()).count();
-    let energy_final: f64 = sim.domain.nodes.iter().map(|n| n.activation).sum();
-    let max_trace = sim.domain.nodes.iter().map(|n| n.memory_trace).fold(0.0_f64, f64::max);
-    let max_cond = sim.domain.edges.iter().map(|e| e.conductance).fold(0.0_f64, f64::max);
+    let energy_final: f32 = sim.domain.nodes.iter().map(|n| n.activation).sum();
+    let max_trace = sim.domain.nodes.iter().map(|n| n.memory_trace).fold(0.0_f32, f32::max);
+    let max_cond = sim.domain.edges.iter().map(|e| e.conductance).fold(0.0_f32, f32::max);
 
     println!("\n=== Fin simulation V4 ===");
     println!("  Nœuds actifs finaux : {}", active_final);
@@ -532,6 +947,67 @@ pub fn run_with_observer(config: &SimConfig, observer: &mut dyn SimulationObserv
 
     observer.on_finish(&sim.domain, &sim.metrics);
 
+    sim.into_result()
+}
+
+/// Exécution d'une simulation déjà configurée (avec trials pré-programmés).
+/// Contrairement à run_with_observer, ne crée pas de Simulation — utilise celle fournie.
+pub fn run_simulation_loop(mut sim: Simulation, observer: &mut dyn SimulationObserver) -> SimulationResult {
+    let t_start = std::time::Instant::now();
+    let config = sim.config.clone();
+
+    observer.on_init(&sim.domain, &config);
+
+    let ticks_label = if sim.total_ticks() == 0 { "∞".to_string() } else { sim.total_ticks().to_string() };
+    println!(
+        "=== Simulation V4 [dopamine+reward] ===\nTopologie: {} | Nœuds: {}, Liaisons: {}, Ticks: {} | Zones: {}",
+        config.domain.topology,
+        sim.domain.num_nodes(),
+        sim.domain.num_edges(),
+        ticks_label,
+        sim.zone_manager.num_zones()
+    );
+
+    while !sim.finished {
+        let tick = sim.tick;
+        let tick_metrics = sim.step();
+
+        let keep_going = observer.on_tick(tick, &sim.domain, &tick_metrics);
+        if !keep_going { break; }
+
+        if tick % 100 == 0 {
+            let acc_str = if sim.total_evaluated > 0 {
+                format!(" | accuracy: {:.1}% ({}/{})", sim.accuracy() * 100.0, sim.correct_count, sim.total_evaluated)
+            } else {
+                String::new()
+            };
+            eprintln!(
+                "  tick {:>5} | actifs: {:>5} | énergie: {:.3} | dopa: {:.3}{} | {:.1}ms/tick",
+                tick, tick_metrics.active_nodes, tick_metrics.global_energy,
+                sim.dopamine_system.level,
+                acc_str,
+                t_start.elapsed().as_secs_f64() * 1000.0 / (tick + 1) as f64
+            );
+        }
+    }
+
+    // Final GPU → CPU sync for accurate end-of-simulation stats
+    if let ComputeBackend::Gpu(ref gpu) = sim.backend {
+        gpu.sync_state_to_domain(&mut sim.domain);
+    }
+
+    let active_final = sim.domain.nodes.iter().filter(|n| n.is_active()).count();
+    let energy_final: f32 = sim.domain.nodes.iter().map(|n| n.activation).sum();
+    println!("\n=== Fin simulation V4 ===");
+    println!("  Nœuds actifs finaux : {}", active_final);
+    println!("  Énergie finale      : {:.4}", energy_final);
+    if sim.total_evaluated > 0 {
+        println!("  Accuracy finale     : {:.1}% ({}/{})", sim.accuracy() * 100.0, sim.correct_count, sim.total_evaluated);
+    }
+    println!("  Dopamine finale     : {:.4}", sim.dopamine_system.level);
+    println!("  Récompense cumulée  : {:.4}", sim.reward_system.cumulative);
+
+    observer.on_finish(&sim.domain, &sim.metrics);
     sim.into_result()
 }
 

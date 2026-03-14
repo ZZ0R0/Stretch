@@ -8,11 +8,11 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone)]
 pub struct DopamineSystem {
     /// Niveau tonique de base (constant sauf modulation manuelle)
-    pub tonic: f64,
+    pub tonic: f32,
     /// Composante phasique (burst/dip, décroît exponentiellement)
-    pub phasic: f64,
+    pub phasic: f32,
     /// Niveau dopaminergique total = tonic + phasic
-    pub level: f64,
+    pub level: f32,
 }
 
 /// Configuration dopaminergique
@@ -65,7 +65,7 @@ impl Default for DopamineConfig {
 
 impl DopamineSystem {
     pub fn new(config: &DopamineConfig) -> Self {
-        let tonic = config.tonic;
+        let tonic = config.tonic as f32;
         DopamineSystem {
             tonic,
             phasic: 0.0,
@@ -78,10 +78,10 @@ impl DopamineSystem {
     /// d_phasic(t+1) = (1 - decay) * d_phasic(t) + gain * r(t)
     /// d_total = d_tonic + d_phasic
     pub fn update(&mut self, reward: f64, config: &DopamineConfig) {
-        self.phasic = (1.0 - config.phasic_decay) * self.phasic
-            + config.reward_gain * reward;
-        self.phasic = self.phasic.clamp(-config.phasic_max, config.phasic_max);
-        self.tonic = config.tonic;
+        self.phasic = (1.0 - config.phasic_decay as f32) * self.phasic
+            + (config.reward_gain as f32) * (reward as f32);
+        self.phasic = self.phasic.clamp(-(config.phasic_max as f32), config.phasic_max as f32);
+        self.tonic = config.tonic as f32;
         self.level = self.tonic + self.phasic;
     }
 }

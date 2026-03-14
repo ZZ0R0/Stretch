@@ -52,11 +52,11 @@ impl Default for OutputConfig {
 #[derive(Debug, Clone)]
 pub struct ReadoutResult {
     /// Scores par classe (somme des activations du groupe)
-    pub scores: Vec<f64>,
+    pub scores: Vec<f32>,
     /// Décision = argmax des scores
     pub decision: usize,
     /// Marge = score gagnant - second score
-    pub margin: f64,
+    pub margin: f32,
 }
 
 impl OutputReader {
@@ -81,9 +81,9 @@ impl OutputReader {
 
     /// Lire la sortie : calculer le score de chaque groupe et produire une décision.
     pub fn readout(&self, domain: &Domain) -> ReadoutResult {
-        let mut scores: Vec<f64> = Vec::with_capacity(self.num_classes);
+        let mut scores: Vec<f32> = Vec::with_capacity(self.num_classes);
         for group in &self.groups {
-            let sum: f64 = group.iter()
+            let sum: f32 = group.iter()
                 .filter_map(|&idx| domain.nodes.get(idx))
                 .map(|n| n.activation)
                 .sum();
@@ -91,8 +91,8 @@ impl OutputReader {
         }
 
         let mut best = 0;
-        let mut best_score = f64::NEG_INFINITY;
-        let mut second_score = f64::NEG_INFINITY;
+        let mut best_score = f32::NEG_INFINITY;
+        let mut second_score = f32::NEG_INFINITY;
         for (i, &s) in scores.iter().enumerate() {
             if s > best_score {
                 second_score = best_score;
@@ -103,7 +103,7 @@ impl OutputReader {
             }
         }
 
-        let margin = if second_score > f64::NEG_INFINITY {
+        let margin = if second_score > f32::NEG_INFINITY {
             best_score - second_score
         } else {
             best_score
