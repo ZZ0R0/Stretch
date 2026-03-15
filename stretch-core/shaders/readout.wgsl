@@ -62,9 +62,17 @@ struct GpuParams {
     zone_k_theta: f32,
     zone_k_gain: f32,
     stimulus_group_size: u32,
+    reset_policy: u32,
+    adaptive_decay_enabled: u32,
+    k_local: f32,
+    reverberation_enabled: u32,
+    reverb_gain: f32,
+    rpe_delta: f32,
+    rho_boost: f32,
+    plasticity_disabled: u32,
+    num_classes: u32,
     _pad0: u32,
     _pad1: u32,
-    _pad2: u32,
 };
 
 @group(0) @binding(0) var<storage, read>       nodes: array<GpuNode>;
@@ -74,8 +82,8 @@ struct GpuParams {
 
 @compute @workgroup_size(64)
 fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
-    let group_size = params.stimulus_group_size; // reuse: same size for I/O groups
-    let num_classes = 2u; // fixed for now
+    let group_size = params.stimulus_group_size;
+    let num_classes = params.num_classes;
     let k = gid.x;
     if (k >= num_classes * group_size) { return; }
 

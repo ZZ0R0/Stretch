@@ -149,6 +149,22 @@ pub struct Trial {
 }
 
 // ---------------------------------------------------------------------------
+// V5.orch : TrialContext — extracted from step_gpu / step_cpu
+// ---------------------------------------------------------------------------
+
+/// Context computed once per tick from the trial schedule.
+struct TrialContext {
+    /// Stimulus class to inject (-1 = none)
+    stimulus_class: i32,
+    /// Whether to reset activations at trial start
+    reset_activations: bool,
+    /// Whether to perform readout this tick
+    need_readout: bool,
+    /// Whether we are currently in a stimulus window
+    in_stimulus: bool,
+}
+
+// ---------------------------------------------------------------------------
 // Simulation V4 — optimized with kernel cache, reusable buffers, PerfMonitor
 // ---------------------------------------------------------------------------
 
@@ -547,6 +563,111 @@ impl Simulation {
         }
     }
 
+    // -----------------------------------------------------------------------
+    // V5.orch : shared trial context & readout processing
+    // -----------------------------------------------------------------------
+
+    /// Compute trial context for the current tick (shared GPU/CPU).
+    fn compute_trial_context(&self, tick: usize) -> TrialContext {
+        let mut ctx = TrialContext {
+            stimulus_class: -1,
+            reset_activations: false,
+            need_readout: false,
+            in_stimulus: false,
+        };
+        if self.current_trial < self.trials.len() {
+            let trial = &self.trials[self.current_trial];
+            if tick == trial.start_tick {
+                ctx.reset_activations = true;
+            }
+            if tick >= trial.start_tick && tick < trial.start_tick + trial.presentation_ticks {
+                ctx.stimulus_class = trial.class as i32;
+                ctx.in_stimulus = true;
+            }
+            let read_tick = trial.start_tick + trial.presentation_ticks + trial.read_delay;
+            if tick == read_tick {
+                ctx.need_readout = true;
+            }
+        }
+        ctx
+    }
+
+    /// Process readout scores: decision, reward, dopamine, spatial center (shared GPU/CPU).
+    fn process_readout(&mut self, tick: usize, scores: &[f32]) {
+        let config = &self.config;
+        let decision = scores.iter().enumerate()
+            .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
+            .map(|(i, _)| i)
+            .unwrap_or(0);
+        self.last_decision = Some(decision);
+
+        // Compute margin for V5.2 margin modulation
+        let margin: f32 = if scores.len() >= 2 {
+            let mut sorted = scores.to_vec();
+            sorted.sort_by(|a, b| b.partial_cmp(a).unwrap_or(std::cmp::Ordering::Equal));
+            sorted[0] - sorted[1]
+        } else {
+            0.0
+        };
+
+        if self.total_evaluated > 0 && self.total_evaluated % 10 == 0 {
+            eprintln!("  [t={} trial={}] target={} dec={} scores={:?} margin={:.1}",
+                tick, self.current_trial, self.last_target.unwrap_or(99), decision, scores, margin);
+        }
+
+        if let Some(target) = self.last_target {
+            self.total_evaluated += 1;
+            let correct = decision == target;
+            if correct { self.correct_count += 1; }
+
+            let reward_val = if correct {
+                config.reward.reward_positive
+            } else {
+                config.reward.reward_negative
+            };
+
+            // V5.2: margin modulation — attenuate reward for trivial trials
+            let r_eff = if config.reward.margin_modulation && margin > 0.0 {
+                reward_val / (1.0 + config.reward.margin_beta * margin.abs() as f64)
+            } else {
+                reward_val
+            };
+
+            self.reward_system.set_reward(r_eff);
+
+            // V5.2: RPE — compute δ = r_eff − baseline
+            let delta = if config.reward.rpe_enabled {
+                self.reward_system.compute_rpe(r_eff as f32, config.reward.rpe_alpha as f32)
+            } else {
+                r_eff as f32
+            };
+
+            // Dopamine update uses δ (RPE) instead of raw reward
+            self.dopamine_system.update(delta as f64, &config.dopamine);
+
+            // Spatial dopamine focus
+            if config.dopamine.spatial_lambda > 0.0 {
+                let focus_group_idx = if correct { target } else { decision };
+                if let Some(ref reader_ref) = self.output_reader {
+                    let focus_group = &reader_ref.groups[focus_group_idx];
+                    let n = focus_group.len() as f64;
+                    if n > 0.0 {
+                        let (mut cx, mut cy, mut cz) = (0.0_f64, 0.0_f64, 0.0_f64);
+                        for &idx in focus_group {
+                            let p = self.domain.positions[idx];
+                            cx += p[0]; cy += p[1]; cz += p[2];
+                        }
+                        self.reward_center = Some([cx / n, cy / n, cz / n]);
+                    }
+                }
+            } else {
+                self.reward_center = None;
+            }
+        }
+
+        self.current_trial += 1;
+    }
+
     /// V4 : Exécuter un seul tick (GPU-first or CPU fallback).
     pub fn step(&mut self) -> TickMetrics {
         let tick = self.tick;
@@ -572,6 +693,8 @@ impl Simulation {
                     self.dopamine_system.level,
                     self.last_decision,
                     self.accuracy(),
+                    self.reward_system.baseline,
+                    self.reward_system.rpe_delta,
                 );
             } else {
                 self.metrics.record(
@@ -582,6 +705,8 @@ impl Simulation {
                     self.dopamine_system.level,
                     self.last_decision,
                     self.accuracy(),
+                    self.reward_system.baseline,
+                    self.reward_system.rpe_delta,
                 );
             }
         }
@@ -610,6 +735,8 @@ impl Simulation {
             mean_eligibility: 0.0,
             output_decision: None,
             accuracy: 0.0,
+            rpe_baseline: 0.0,
+            rpe_delta: 0.0,
         });
 
         self.perf.end_phase(Phase::Metrics);
@@ -626,24 +753,12 @@ impl Simulation {
     /// GPU-first path: entire pipeline runs on GPU in a single submit.
     fn step_gpu(&mut self, tick: usize) {
         let config = &self.config;
+        let ctx = self.compute_trial_context(tick);
 
-        // --- Determine trial state ---
-        let mut stimulus_class: i32 = -1;
-        let mut reset_activations = false;
-        let mut need_readout = false;
-
-        if self.current_trial < self.trials.len() {
-            let trial = &self.trials[self.current_trial];
-            if tick == trial.start_tick {
-                reset_activations = true;
-            }
-            if tick >= trial.start_tick && tick < trial.start_tick + trial.presentation_ticks {
-                stimulus_class = trial.class as i32;
+        // Update last_target during stimulus window
+        if ctx.in_stimulus {
+            if let Some(trial) = self.trials.get(self.current_trial) {
                 self.last_target = Some(trial.target_class);
-            }
-            let read_tick = trial.start_tick + trial.presentation_ticks + trial.read_delay;
-            if tick == read_tick {
-                need_readout = true;
             }
         }
 
@@ -701,7 +816,7 @@ impl Simulation {
             consol_conductance_threshold: config.consolidation.threshold as f32,
             consol_ticks_required: config.consolidation.ticks_required as u32,
             budget: config.synaptic_budget.budget as f32,
-            stimulus_class,
+            stimulus_class: ctx.stimulus_class,
             stimulus_intensity: config.input.intensity as f32,
             num_zones: config.zones.num_zones as u32,
             zone_kp: config.zones.kp as f32,
@@ -712,14 +827,27 @@ impl Simulation {
             zone_k_theta: config.zones.k_theta as f32,
             zone_k_gain: config.zones.k_gain as f32,
             stimulus_group_size: config.input.group_size as u32,
+            // V5.2 fields
+            reset_policy: match config.v5_sustained.reset_policy.as_str() {
+                "partial" => 1,
+                "none" => 2,
+                _ => 0, // "full"
+            },
+            adaptive_decay_enabled: if config.v5_sustained.adaptive_decay { 1 } else { 0 },
+            k_local: config.v5_sustained.k_local as f32,
+            reverberation_enabled: if config.v5_sustained.reverberation { 1 } else { 0 },
+            reverb_gain: config.v5_sustained.reverb_gain as f32,
+            rpe_delta: self.reward_system.rpe_delta,
+            rho_boost: config.reward.rho_boost as f32,
+            plasticity_disabled: if self.plasticity_disabled { 1 } else { 0 },
+            num_classes: config.input.num_classes as u32,
             _pad0: 0,
             _pad1: 0,
-            _pad2: 0,
         };
 
         // --- Single GPU submit ---
         if let ComputeBackend::Gpu(ref gpu) = self.backend {
-            gpu.run_full_tick(&gpu_params, need_readout, reset_activations);
+            gpu.run_full_tick(&gpu_params, ctx.need_readout, ctx.reset_activations);
         }
 
         self.perf.end_phase(Phase::GpuTick);
@@ -727,54 +855,11 @@ impl Simulation {
         // --- Dopamine decay ---
         self.dopamine_system.update(0.0, &config.dopamine);
 
-        // --- Readout + reward ---
-        if need_readout {
+        // --- Readout + reward (shared) ---
+        if ctx.need_readout {
             if let ComputeBackend::Gpu(ref gpu) = self.backend {
                 let scores = gpu.read_readout_scores(config.input.num_classes);
-                let decision = scores.iter().enumerate()
-                    .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
-                    .map(|(i, _)| i)
-                    .unwrap_or(0);
-                self.last_decision = Some(decision);
-
-                if self.total_evaluated > 0 && self.total_evaluated % 10 == 0 {
-                    eprintln!("  [GPU t={} trial={}] target={} dec={} scores={:?}",
-                        tick, self.current_trial, self.last_target.unwrap_or(99), decision, scores);
-                }
-
-                if let Some(target) = self.last_target {
-                    self.total_evaluated += 1;
-                    let correct = decision == target;
-                    if correct { self.correct_count += 1; }
-
-                    let reward_val = if correct {
-                        config.reward.reward_positive
-                    } else {
-                        config.reward.reward_negative
-                    };
-                    self.reward_system.set_reward(reward_val);
-                    self.dopamine_system.update(reward_val, &config.dopamine);
-
-                    if config.dopamine.spatial_lambda > 0.0 {
-                        let focus_group_idx = if correct { target } else { decision };
-                        if let Some(ref reader_ref) = self.output_reader {
-                            let focus_group = &reader_ref.groups[focus_group_idx];
-                            let n = focus_group.len() as f64;
-                            if n > 0.0 {
-                                let (mut cx, mut cy, mut cz) = (0.0_f64, 0.0_f64, 0.0_f64);
-                                for &idx in focus_group {
-                                    let p = self.domain.positions[idx];
-                                    cx += p[0]; cy += p[1]; cz += p[2];
-                                }
-                                self.reward_center = Some([cx / n, cy / n, cz / n]);
-                            }
-                        }
-                    } else {
-                        self.reward_center = None;
-                    }
-                }
-
-                self.current_trial += 1;
+                self.process_readout(tick, &scores);
             }
         }
 
@@ -785,6 +870,7 @@ impl Simulation {
     /// CPU fallback path: original hybrid step logic (no GPU).
     fn step_cpu(&mut self, tick: usize) {
         let config = &self.config;
+        let ctx = self.compute_trial_context(tick);
 
         // === Phase 0+1 : Zones + PID ===
         self.zone_manager.measure(&self.domain);
@@ -801,24 +887,21 @@ impl Simulation {
         }
 
         // === Phase 3 : V4/V5 — injection d'entrée ===
-        let mut in_stimulus = false;
         if let Some(ref encoder) = self.input_encoder {
-            if self.current_trial < self.trials.len() {
-                let trial = &self.trials[self.current_trial];
-                if tick == trial.start_tick {
-                    // V5 : politique de reset configurable
-                    sustained::apply_reset_policy(&mut self.domain, &config.v5_sustained.reset_policy);
-                }
-                if tick >= trial.start_tick && tick < trial.start_tick + trial.presentation_ticks {
+            if ctx.reset_activations {
+                // V5 : politique de reset configurable
+                sustained::apply_reset_policy(&mut self.domain, &config.v5_sustained.reset_policy);
+            }
+            if ctx.in_stimulus {
+                if let Some(trial) = self.trials.get(self.current_trial) {
                     encoder.inject(&mut self.domain, trial.class, config.input.intensity);
                     self.last_target = Some(trial.target_class);
-                    in_stimulus = true;
                 }
             }
         }
 
         // V5 : sustain ratio tracking
-        self.sustain_tracker.set_in_stimulus(in_stimulus);
+        self.sustain_tracker.set_in_stimulus(ctx.in_stimulus);
 
         self.perf.end_phase(Phase::StimInput);
 
@@ -956,6 +1039,8 @@ impl Simulation {
                 dopamine_level,
                 reward_center,
                 tick,
+                self.reward_system.rpe_delta,
+                config.reward.rho_boost as f32,
                 &mut self.buf_activation_ticks,
                 &mut self.buf_node_delta_dopa,
                 &mut self.cached_dopa_center,
@@ -966,57 +1051,11 @@ impl Simulation {
 
         self.perf.end_phase(Phase::Plasticity);
 
-        // === Phase 7 : V4 — readout de sortie ===
-        if let Some(ref reader) = self.output_reader {
-            if self.current_trial < self.trials.len() {
-                let trial = &self.trials[self.current_trial];
-                let read_tick = trial.start_tick + trial.presentation_ticks + trial.read_delay;
-                if tick == read_tick {
-                    let result = reader.readout(&self.domain);
-                    self.last_decision = Some(result.decision);
-
-                    if self.total_evaluated > 0 && self.total_evaluated % 10 == 0 {
-                        eprintln!("  [DIAG t={} trial={}] target={} dec={} scores=[{:.1}, {:.1}] margin={:.1}",
-                            tick, self.current_trial, self.last_target.unwrap_or(99), result.decision,
-                            result.scores[0], result.scores[1], result.margin);
-                    }
-
-                    if let Some(target) = self.last_target {
-                        self.total_evaluated += 1;
-                        let correct = result.decision == target;
-                        if correct {
-                            self.correct_count += 1;
-                        }
-
-                        let reward_val = if correct {
-                            config.reward.reward_positive
-                        } else {
-                            config.reward.reward_negative
-                        };
-                        self.reward_system.set_reward(reward_val);
-                        self.dopamine_system.update(reward_val, &config.dopamine);
-
-                        if config.dopamine.spatial_lambda > 0.0 {
-                            let focus_group_idx = if correct { target } else { result.decision };
-                            if let Some(ref reader_ref) = self.output_reader {
-                                let focus_group = &reader_ref.groups[focus_group_idx];
-                                let n = focus_group.len() as f64;
-                                if n > 0.0 {
-                                    let (mut cx, mut cy, mut cz) = (0.0_f64, 0.0_f64, 0.0_f64);
-                                    for &idx in focus_group {
-                                        let p = self.domain.positions[idx];
-                                        cx += p[0]; cy += p[1]; cz += p[2];
-                                    }
-                                    self.reward_center = Some([cx / n, cy / n, cz / n]);
-                                }
-                            }
-                        } else {
-                            self.reward_center = None;
-                        }
-                    }
-
-                    self.current_trial += 1;
-                }
+        // === Phase 7 : V4 — readout de sortie (shared) ===
+        if ctx.need_readout {
+            if let Some(ref reader) = self.output_reader {
+                let result = reader.readout(&self.domain);
+                self.process_readout(tick, &result.scores);
             }
         }
 

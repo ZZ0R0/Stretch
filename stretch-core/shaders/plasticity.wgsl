@@ -63,9 +63,17 @@ struct GpuParams {
     zone_k_theta: f32,
     zone_k_gain: f32,
     stimulus_group_size: u32,
+    reset_policy: u32,
+    adaptive_decay_enabled: u32,
+    k_local: f32,
+    reverberation_enabled: u32,
+    reverb_gain: f32,
+    rpe_delta: f32,
+    rho_boost: f32,
+    plasticity_disabled: u32,
+    num_classes: u32,
     _pad0: u32,
     _pad1: u32,
-    _pad2: u32,
 };
 
 struct GpuEdge {
@@ -88,6 +96,11 @@ struct GpuEdge {
 fn main(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(num_workgroups) nwg: vec3<u32>) {
     let idx = gid.y * (nwg.x * 256u) + gid.x;
     if (idx >= params.num_edges) {
+        return;
+    }
+
+    // V5.2: skip all plasticity when disabled (TopologyOnly / RandomBaseline)
+    if (params.plasticity_disabled != 0u) {
         return;
     }
 
@@ -132,9 +145,14 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(num_workgroups) 
     edges[idx].conductance = cond;
 
     // --- Step 4: Homeostatic decay (skip if consolidated) ---
+    // V5.2: accelerated forgetting — ρ_eff = ρ₀ + ρ_boost × max(0, -δ)
     if (edges[idx].consolidated == 0u) {
         cond = edges[idx].conductance;
-        cond = cond + params.homeostatic_rate * (params.baseline_cond - cond);
+        var rho_eff = params.homeostatic_rate;
+        if (params.rho_boost > 0.0) {
+            rho_eff = rho_eff + params.rho_boost * max(0.0, -params.rpe_delta);
+        }
+        cond = cond + rho_eff * (params.baseline_cond - cond);
         cond = clamp(cond, params.cond_min, params.cond_max);
         edges[idx].conductance = cond;
     }

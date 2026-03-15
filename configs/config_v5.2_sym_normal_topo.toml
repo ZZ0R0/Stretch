@@ -1,0 +1,135 @@
+# ============================================================================
+# Stretch V5.2 — Symmetric + Normal mapping + TopologyOnly
+# ============================================================================
+# Baseline: ~97% accuracy (topological bias suffices)
+# V5.2: RPE enabled but plasticity disabled → pure topological readout
+# ============================================================================
+
+[domain]
+topology = "knn_3d"
+size = 50000
+k_neighbors = 10
+domain_extent = 100.0
+seed = 42
+
+[node_defaults]
+activation = 0.0
+threshold = 0.2
+fatigue = 0.0
+memory_trace = 0.0
+excitability = 1.0
+inhibition = 0.0
+
+[edge_defaults]
+conductance = 1.0
+plasticity = 1.0
+decay = 0.0001
+conductance_min = 0.1
+conductance_max = 5.0
+
+[propagation]
+kernel = "exponential"
+spatial_decay = 0.3
+gain = 0.8
+gain_inhibitory = 0.8
+
+[dissipation]
+activation_decay = 0.25
+fatigue_gain = 0.20
+fatigue_recovery = 0.05
+inhibition_gain = 0.12
+inhibition_decay = 0.03
+trace_decay = 0.005
+trace_gain = 0.1
+activation_min = 0.01
+decay_jitter = 0.15
+
+[simulation]
+total_ticks = 10000
+snapshot_interval = 10
+seed = 42
+
+[neuron_types]
+inhibitory_fraction = 0.2
+
+[zones]
+num_zones = 8
+partition_method = "voronoi"
+target_activity = 0.3
+kp = 0.5
+ki = 0.05
+kd = 0.1
+pid_output_max = 2.0
+pid_integral_max = 5.0
+pid_mode = "indirect"
+k_theta = 0.3
+k_gain = 0.2
+
+[consolidation]
+threshold = 4.0
+ticks_required = 50
+
+[stdp]
+a_plus = 0.008
+a_minus = 0.008
+tau_plus = 20.0
+tau_minus = 20.0
+
+[synaptic_budget]
+budget = 30.0
+
+[dopamine]
+tonic = 0.1
+phasic_decay = 0.15
+reward_gain = 1.0
+plasticity_gain = 3.0
+consolidation_threshold = 0.3
+phasic_max = 2.0
+spatial_lambda = 0.15
+
+[reward]
+reward_positive = 1.0
+reward_negative = -0.5
+rpe_enabled = true
+rpe_alpha = 0.05
+rho_boost = 0.01
+margin_modulation = true
+margin_beta = 0.1
+
+[eligibility]
+decay = 0.95
+max = 5.0
+
+[input]
+num_classes = 2
+group_size = 50
+start_node = 0
+intensity = 1.5
+
+[output]
+num_classes = 2
+group_size = 50
+start_node = 500
+read_delay = 15
+
+[compute]
+backend = "gpu"
+
+[v5_task]
+task_mode = "Symmetric"
+baseline_mode = "TopologyOnly"
+presentation_ticks = 8
+
+[v5_sustained]
+adaptive_decay = true
+k_local = 0.3
+reverberation = true
+reverb_gain = 0.12
+reset_policy = "partial"
+
+[v5_diagnostics]
+path_tracer = true
+topological_coherence = true
+sustain_ratio = true
+interval = 50
+top_paths = 5

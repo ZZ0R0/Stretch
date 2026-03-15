@@ -48,6 +48,12 @@ pub struct TickMetrics {
     pub output_decision: Option<usize>,
     /// V4 : accuracy courante
     pub accuracy: f32,
+    /// V5.2 : baseline RPE (moyenne glissante du reward)
+    #[serde(default)]
+    pub rpe_baseline: f32,
+    /// V5.2 : RPE delta (δ = r_eff - baseline)
+    #[serde(default)]
+    pub rpe_delta: f32,
 }
 
 /// Collecte complète des métriques sur la simulation.
@@ -72,6 +78,8 @@ impl MetricsLog {
         dopamine_level: f32,
         output_decision: Option<usize>,
         accuracy: f64,
+        rpe_baseline: f32,
+        rpe_delta: f32,
     ) {
         let n_nodes = domain.nodes.len().max(1) as f32;
         let n_edges = domain.edges.len().max(1) as f32;
@@ -157,6 +165,9 @@ impl MetricsLog {
             mean_eligibility: sum_eligibility / n_edges,
             output_decision,
             accuracy: accuracy as f32,
+            // V5.2
+            rpe_baseline,
+            rpe_delta,
         });
     }
 
@@ -170,6 +181,8 @@ impl MetricsLog {
         dopamine_level: f32,
         output_decision: Option<usize>,
         accuracy: f64,
+        rpe_baseline: f32,
+        rpe_delta: f32,
     ) {
         self.snapshots.push(TickMetrics {
             tick,
@@ -196,6 +209,9 @@ impl MetricsLog {
             mean_eligibility: gpu_metrics.mean_eligibility,
             output_decision,
             accuracy: accuracy as f32,
+            // V5.2
+            rpe_baseline,
+            rpe_delta,
         });
     }
 

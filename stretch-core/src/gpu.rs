@@ -101,10 +101,19 @@ pub struct GpuParams {
     pub zone_k_gain: f32,
     // --- Groups ---
     pub stimulus_group_size: u32,
-    // --- Padding to 192 bytes (16-byte aligned) ---
+    // --- V5.2 additions (192→224 bytes) ---
+    pub reset_policy: u32,            // 0=full, 1=partial, 2=none
+    pub adaptive_decay_enabled: u32,
+    pub k_local: f32,
+    pub reverberation_enabled: u32,
+    pub reverb_gain: f32,
+    pub rpe_delta: f32,
+    pub rho_boost: f32,
+    pub plasticity_disabled: u32,
+    pub num_classes: u32,
+    // --- Padding to 224 bytes (16-byte aligned) ---
     pub _pad0: u32,
     pub _pad1: u32,
-    pub _pad2: u32,
 }
 
 /// Edge data layout for GPU buffers (32 bytes).
@@ -186,6 +195,10 @@ pub struct GpuContext {
     readout_pipeline: wgpu::ComputePipeline,
     metrics_nodes_pipeline: wgpu::ComputePipeline,
     metrics_edges_pipeline: wgpu::ComputePipeline,
+    // V5.2: new pipelines
+    reverberation_pipeline: wgpu::ComputePipeline,
+    adaptive_decay_pipeline: wgpu::ComputePipeline,
+    snapshot_activations_pipeline: wgpu::ComputePipeline,
     // --- Persistent GPU buffers ---
     buf_nodes: wgpu::Buffer,
     buf_edges: wgpu::Buffer,
@@ -206,6 +219,10 @@ pub struct GpuContext {
     buf_readout_groups: wgpu::Buffer,
     buf_readout_scores: wgpu::Buffer,
     buf_metrics_output: wgpu::Buffer,
+    // V5.2: new buffers
+    buf_prev_activations: wgpu::Buffer,
+    buf_outgoing_offsets: wgpu::Buffer,
+    buf_outgoing_targets: wgpu::Buffer,
     // --- Staging buffers ---
     staging_readout: wgpu::Buffer,
     staging_edges: wgpu::Buffer,
@@ -222,6 +239,10 @@ pub struct GpuContext {
     sync_cond_bg: wgpu::BindGroup,
     readout_bg: wgpu::BindGroup,
     metrics_bg: wgpu::BindGroup,
+    // V5.2: new bind groups
+    reverberation_bg: wgpu::BindGroup,
+    adaptive_decay_bg: wgpu::BindGroup,
+    snapshot_bg: wgpu::BindGroup,
     // --- Timestamp profiling ---
     timestamp_query_set: Option<wgpu::QuerySet>,
     timestamp_resolve_buf: Option<wgpu::Buffer>,
@@ -544,8 +565,43 @@ impl GpuContext {
             mapped_at_creation: false,
         });
 
-        // Timestamp query resources (24 timestamps: begin+end for 12 phases)
-        const TS_COUNT: u32 = 24;
+        // V5.2: Previous activations buffer (for reverberation)
+        let buf_prev_activations = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("prev_activations"),
+            size: (num_nodes as u64) * 4,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
+        // V5.2: Outgoing CSR buffers (for adaptive decay)
+        let buf_outgoing_offsets = {
+            let offsets: Vec<u32> = domain.outgoing.offsets.iter().map(|&x| x as u32).collect();
+            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("outgoing_offsets"),
+                contents: bytemuck::cast_slice(&offsets),
+                usage: wgpu::BufferUsages::STORAGE,
+            })
+        };
+        let buf_outgoing_targets = {
+            let targets: Vec<u32> = domain.outgoing.target_nodes.iter().map(|&x| x as u32).collect();
+            if targets.is_empty() {
+                // Need at least 1 element for valid WGSL binding
+                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: Some("outgoing_targets"),
+                    contents: bytemuck::cast_slice(&[0u32]),
+                    usage: wgpu::BufferUsages::STORAGE,
+                })
+            } else {
+                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: Some("outgoing_targets"),
+                    contents: bytemuck::cast_slice(&targets),
+                    usage: wgpu::BufferUsages::STORAGE,
+                })
+            }
+        };
+
+        // Timestamp query resources (30 timestamps: begin+end for 15 phases)
+        const TS_COUNT: u32 = 30;
         let (timestamp_query_set, timestamp_resolve_buf, timestamp_staging_buf) = if has_timestamps {
             let qs = device.create_query_set(&wgpu::QuerySetDescriptor {
                 label: Some("perf_timestamps"),
@@ -613,6 +669,20 @@ impl GpuContext {
         let metrics_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("metrics_reduce"),
             source: wgpu::ShaderSource::Wgsl(include_str!("../shaders/metrics_reduce.wgsl").into()),
+        });
+
+        // V5.2: new shaders
+        let reverberation_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("reverberation"),
+            source: wgpu::ShaderSource::Wgsl(include_str!("../shaders/reverberation.wgsl").into()),
+        });
+        let adaptive_decay_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("adaptive_decay"),
+            source: wgpu::ShaderSource::Wgsl(include_str!("../shaders/adaptive_decay.wgsl").into()),
+        });
+        let snapshot_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("snapshot_activations"),
+            source: wgpu::ShaderSource::Wgsl(include_str!("../shaders/snapshot_activations.wgsl").into()),
         });
 
         // ====================================================================
@@ -730,6 +800,37 @@ impl GpuContext {
             ],
         });
 
+        // V5.2: reverberation_bgl: nodes(rw), prev_activations(r), params(uniform)
+        let reverberation_bgl = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("reverberation_bgl"),
+            entries: &[
+                bgl_entry(0, wgpu::BufferBindingType::Storage { read_only: false }),
+                bgl_entry(1, wgpu::BufferBindingType::Storage { read_only: true }),
+                bgl_entry(2, wgpu::BufferBindingType::Uniform),
+            ],
+        });
+
+        // V5.2: adaptive_decay_bgl: nodes(rw), out_offsets(r), out_targets(r), params(uniform)
+        let adaptive_decay_bgl = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("adaptive_decay_bgl"),
+            entries: &[
+                bgl_entry(0, wgpu::BufferBindingType::Storage { read_only: false }),
+                bgl_entry(1, wgpu::BufferBindingType::Storage { read_only: true }),
+                bgl_entry(2, wgpu::BufferBindingType::Storage { read_only: true }),
+                bgl_entry(3, wgpu::BufferBindingType::Uniform),
+            ],
+        });
+
+        // V5.2: snapshot_bgl: nodes(r), prev_activations(rw), params(uniform)
+        let snapshot_bgl = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("snapshot_bgl"),
+            entries: &[
+                bgl_entry(0, wgpu::BufferBindingType::Storage { read_only: true }),
+                bgl_entry(1, wgpu::BufferBindingType::Storage { read_only: false }),
+                bgl_entry(2, wgpu::BufferBindingType::Uniform),
+            ],
+        });
+
         // ====================================================================
         // Pipelines
         // ====================================================================
@@ -764,6 +865,11 @@ impl GpuContext {
         let readout_pipeline = make_pipeline("readout", &readout_bgl, &readout_shader, "main");
         let metrics_nodes_pipeline = make_pipeline("metrics_nodes", &metrics_bgl, &metrics_shader, "reduce_nodes");
         let metrics_edges_pipeline = make_pipeline("metrics_edges", &metrics_bgl, &metrics_shader, "reduce_edges");
+
+        // V5.2: new pipelines
+        let reverberation_pipeline = make_pipeline("reverberation", &reverberation_bgl, &reverberation_shader, "main");
+        let adaptive_decay_pipeline = make_pipeline("adaptive_decay", &adaptive_decay_bgl, &adaptive_decay_shader, "main");
+        let snapshot_activations_pipeline = make_pipeline("snapshot", &snapshot_bgl, &snapshot_shader, "main");
 
         // ====================================================================
         // Bind groups
@@ -879,6 +985,38 @@ impl GpuContext {
             ],
         });
 
+        // V5.2: new bind groups
+        let reverberation_bg = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("reverberation_bg"),
+            layout: &reverberation_bgl,
+            entries: &[
+                wgpu::BindGroupEntry { binding: 0, resource: buf_nodes.as_entire_binding() },
+                wgpu::BindGroupEntry { binding: 1, resource: buf_prev_activations.as_entire_binding() },
+                wgpu::BindGroupEntry { binding: 2, resource: buf_params.as_entire_binding() },
+            ],
+        });
+
+        let adaptive_decay_bg = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("adaptive_decay_bg"),
+            layout: &adaptive_decay_bgl,
+            entries: &[
+                wgpu::BindGroupEntry { binding: 0, resource: buf_nodes.as_entire_binding() },
+                wgpu::BindGroupEntry { binding: 1, resource: buf_outgoing_offsets.as_entire_binding() },
+                wgpu::BindGroupEntry { binding: 2, resource: buf_outgoing_targets.as_entire_binding() },
+                wgpu::BindGroupEntry { binding: 3, resource: buf_params.as_entire_binding() },
+            ],
+        });
+
+        let snapshot_bg = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("snapshot_bg"),
+            layout: &snapshot_bgl,
+            entries: &[
+                wgpu::BindGroupEntry { binding: 0, resource: buf_nodes.as_entire_binding() },
+                wgpu::BindGroupEntry { binding: 1, resource: buf_prev_activations.as_entire_binding() },
+                wgpu::BindGroupEntry { binding: 2, resource: buf_params.as_entire_binding() },
+            ],
+        });
+
         eprintln!(
             "[GPU] GPU-First initialized: {} nodes, {} edges, {} zones, workgroup_size={}",
             num_nodes, num_edges, num_zones, workgroup_size
@@ -902,6 +1040,9 @@ impl GpuContext {
             readout_pipeline,
             metrics_nodes_pipeline,
             metrics_edges_pipeline,
+            reverberation_pipeline,
+            adaptive_decay_pipeline,
+            snapshot_activations_pipeline,
             buf_nodes,
             buf_edges,
             buf_conductances,
@@ -921,6 +1062,9 @@ impl GpuContext {
             buf_readout_groups,
             buf_readout_scores,
             buf_metrics_output,
+            buf_prev_activations,
+            buf_outgoing_offsets,
+            buf_outgoing_targets,
             staging_readout,
             staging_edges,
             staging_nodes,
@@ -935,6 +1079,9 @@ impl GpuContext {
             sync_cond_bg,
             readout_bg,
             metrics_bg,
+            reverberation_bg,
+            adaptive_decay_bg,
+            snapshot_bg,
             timestamp_query_set,
             timestamp_resolve_buf,
             timestamp_staging_buf,
@@ -1063,6 +1210,32 @@ impl GpuContext {
             pass.dispatch_workgroups(dispatch_nodes.0, dispatch_nodes.1, 1);
         }
 
+        // Phase 7b: Reverberation (add previous activation contribution)
+        {
+            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor::default());
+            pass.set_pipeline(&self.reverberation_pipeline);
+            pass.set_bind_group(0, &self.reverberation_bg, &[]);
+            pass.dispatch_workgroups(dispatch_nodes.0, dispatch_nodes.1, 1);
+        }
+
+        // Phase 7b': Snapshot activations → prev buffer (for next tick's reverberation)
+        // MUST be here (post-reverb, pre-decay) to match CPU snapshot timing.
+        // Previously at Phase 12 (post-decay), causing weaker reverberation on GPU.
+        {
+            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor::default());
+            pass.set_pipeline(&self.snapshot_activations_pipeline);
+            pass.set_bind_group(0, &self.snapshot_bg, &[]);
+            pass.dispatch_workgroups(dispatch_nodes.0, dispatch_nodes.1, 1);
+        }
+
+        // Phase 7c: Adaptive decay (neighborhood-dependent, replaces standard decay when enabled)
+        {
+            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor::default());
+            pass.set_pipeline(&self.adaptive_decay_pipeline);
+            pass.set_bind_group(0, &self.adaptive_decay_bg, &[]);
+            pass.dispatch_workgroups(dispatch_nodes.0, dispatch_nodes.1, 1);
+        }
+
         // Phase 8: Plasticity (STDP + 3-factor + homeostasis + consolidation)
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor::default());
@@ -1118,10 +1291,12 @@ impl GpuContext {
         }
     }
 
-    /// Phase names for profiling output (12 phases).
-    const PHASE_NAMES: [&str; 12] = [
+    /// Phase names for profiling output (15 phases — snapshot moved to post-reverb pre-decay).
+    const PHASE_NAMES: [&str; 15] = [
         "reset", "inject", "zone_measure", "zone_pid", "zone_apply",
-        "source_contribs", "propagation", "apply_dissipate", "plasticity",
+        "source_contribs", "propagation", "apply_dissipate",
+        "reverberation", "snapshot", "adaptive_decay",
+        "plasticity",
         "budget_sum", "budget_scale+sync_cond", "readout",
     ];
 
@@ -1223,25 +1398,49 @@ impl GpuContext {
             pass.set_bind_group(0, &self.dissipate_bg, &[]);
             pass.dispatch_workgroups(dispatch_nodes.0, dispatch_nodes.1, 1);
         }
-        // Phase 8: Plasticity
+        // Phase 8: Reverberation (V5.2)
         {
-            let desc = ts_pass!(encoder, "plasticity", 8);
+            let desc = ts_pass!(encoder, "reverberation", 8);
+            let mut pass = encoder.begin_compute_pass(&desc);
+            pass.set_pipeline(&self.reverberation_pipeline);
+            pass.set_bind_group(0, &self.reverberation_bg, &[]);
+            pass.dispatch_workgroups(dispatch_nodes.0, dispatch_nodes.1, 1);
+        }
+        // Phase 9: Snapshot activations (post-reverb, pre-decay — matches CPU timing)
+        {
+            let desc = ts_pass!(encoder, "snapshot", 9);
+            let mut pass = encoder.begin_compute_pass(&desc);
+            pass.set_pipeline(&self.snapshot_activations_pipeline);
+            pass.set_bind_group(0, &self.snapshot_bg, &[]);
+            pass.dispatch_workgroups(dispatch_nodes.0, dispatch_nodes.1, 1);
+        }
+        // Phase 10: Adaptive decay (V5.2)
+        {
+            let desc = ts_pass!(encoder, "adaptive_decay", 10);
+            let mut pass = encoder.begin_compute_pass(&desc);
+            pass.set_pipeline(&self.adaptive_decay_pipeline);
+            pass.set_bind_group(0, &self.adaptive_decay_bg, &[]);
+            pass.dispatch_workgroups(dispatch_nodes.0, dispatch_nodes.1, 1);
+        }
+        // Phase 11: Plasticity
+        {
+            let desc = ts_pass!(encoder, "plasticity", 11);
             let mut pass = encoder.begin_compute_pass(&desc);
             pass.set_pipeline(&self.plasticity_pipeline);
             pass.set_bind_group(0, &self.plasticity_bg, &[]);
             pass.dispatch_workgroups(dispatch_edges.0, dispatch_edges.1, 1);
         }
-        // Phase 9: Budget sum
+        // Phase 12: Budget sum
         {
-            let desc = ts_pass!(encoder, "budget_sum", 9);
+            let desc = ts_pass!(encoder, "budget_sum", 12);
             let mut pass = encoder.begin_compute_pass(&desc);
             pass.set_pipeline(&self.budget_sum_pipeline);
             pass.set_bind_group(0, &self.budget_bg, &[]);
             pass.dispatch_workgroups(dispatch_edges.0, dispatch_edges.1, 1);
         }
-        // Phase 10: Budget scale + sync conductances
+        // Phase 13: Budget scale + sync conductances
         {
-            let desc = ts_pass!(encoder, "budget_scale+sync_cond", 10);
+            let desc = ts_pass!(encoder, "budget_scale+sync_cond", 13);
             let mut pass = encoder.begin_compute_pass(&desc);
             pass.set_pipeline(&self.budget_scale_pipeline);
             pass.set_bind_group(0, &self.budget_bg, &[]);
@@ -1253,9 +1452,9 @@ impl GpuContext {
             pass.set_bind_group(0, &self.sync_cond_bg, &[]);
             pass.dispatch_workgroups(dispatch_edges.0, dispatch_edges.1, 1);
         }
-        // Phase 11: Readout
+        // Phase 14: Readout
         {
-            let desc = ts_pass!(encoder, "readout", 11);
+            let desc = ts_pass!(encoder, "readout", 14);
             let readout_dispatch = (self.num_classes * self.group_size + 63) / 64;
             let mut pass = encoder.begin_compute_pass(&desc);
             pass.set_pipeline(&self.readout_pipeline);
@@ -1270,7 +1469,7 @@ impl GpuContext {
         );
 
         // Resolve timestamps
-        let ts_count = 24u32;
+        let ts_count = 30u32;
         encoder.resolve_query_set(qs, 0..ts_count, resolve_buf, 0);
         encoder.copy_buffer_to_buffer(resolve_buf, 0, staging_buf, 0, (ts_count as u64) * 8);
 
@@ -1288,8 +1487,8 @@ impl GpuContext {
         let timestamps: &[u64] = bytemuck::cast_slice(&data);
 
         let period_ns = self.timestamp_period as f64;
-        let mut timings = Vec::with_capacity(12);
-        for i in 0..12usize {
+        let mut timings = Vec::with_capacity(15);
+        for i in 0..15usize {
             let begin = timestamps[i * 2];
             let end = timestamps[i * 2 + 1];
             let us = (end.wrapping_sub(begin)) as f64 * period_ns / 1000.0;

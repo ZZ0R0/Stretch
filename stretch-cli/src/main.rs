@@ -9,14 +9,24 @@ use stretch_core::simulation::{self, Simulation, NullObserver};
 fn main() {
     let args: Vec<String> = env::args().collect();
 
-    let config = if args.len() > 1 && args[1] != "--gen-config" {
+    // Parse --seeds N argument (multi-seed mode)
+    let seeds_count = parse_seeds_arg(&args);
+
+    let config = if args.len() > 1 && args[1] != "--gen-config" && args[1] != "--seeds" {
         let config_path = &args[1];
         let content = fs::read_to_string(config_path)
             .unwrap_or_else(|e| panic!("Impossible de lire {} : {}", config_path, e));
         toml::from_str::<SimConfig>(&content)
             .unwrap_or_else(|e| panic!("Erreur de parsing config : {}", e))
+    } else if args.len() > 2 && args[2] != "--seeds" {
+        // --seeds N config.toml  OR  config.toml --seeds N
+        let config_path = if args[1] == "--seeds" { &args[3] } else { &args[1] };
+        let content = fs::read_to_string(config_path)
+            .unwrap_or_else(|e| panic!("Impossible de lire {} : {}", config_path, e));
+        toml::from_str::<SimConfig>(&content)
+            .unwrap_or_else(|e| panic!("Erreur de parsing config : {}", e))
     } else {
-        if args.len() > 1 && args[1] == "--gen-config" {
+        if args.iter().any(|a| a == "--gen-config") {
             let default_config = SimConfig::default();
             let toml_str =
                 toml::to_string_pretty(&default_config).expect("Erreur de sérialisation TOML");
@@ -26,10 +36,108 @@ fn main() {
             return;
         }
         println!("Aucun fichier de config fourni, utilisation des valeurs par défaut.");
-        println!("Usage: stretch-cli <config.toml>\n");
+        println!("Usage: stretch-cli <config.toml> [--seeds N]\n");
         SimConfig::default()
     };
 
+    if let Some(n_seeds) = seeds_count {
+        run_multi_seed(&config, n_seeds);
+    } else {
+        run_single(&config);
+    }
+}
+
+/// Parse --seeds N from CLI arguments. Returns Some(N) if found.
+fn parse_seeds_arg(args: &[String]) -> Option<usize> {
+    for (i, arg) in args.iter().enumerate() {
+        if arg == "--seeds" {
+            if let Some(val) = args.get(i + 1) {
+                return val.parse::<usize>().ok();
+            }
+        }
+    }
+    None
+}
+
+/// Run N simulations with different seeds, aggregate results to CSV.
+fn run_multi_seed(base_config: &SimConfig, n_seeds: usize) {
+    let base_seed = base_config.domain.seed;
+    let is_v5 = base_config.v5_task.task_mode != V5TaskMode::Legacy;
+    let version_tag = if is_v5 {
+        format!("V5 {:?}", base_config.v5_task.task_mode)
+    } else {
+        "V4".to_string()
+    };
+
+    println!("[Multi-seed] Running {} seeds for {} mode", n_seeds, version_tag);
+
+    let mut all_accuracies = Vec::with_capacity(n_seeds);
+
+    for s in 0..n_seeds {
+        let seed = base_seed + s as u64;
+        let mut config = base_config.clone();
+        config.domain.seed = seed;
+
+        let mut sim = Simulation::new(config.clone());
+        let n_trials = if is_v5 {
+            sim.setup_v5_training()
+        } else {
+            sim.setup_v4_training()
+        };
+
+        println!("[Seed {}] {} trials, seed={}", s, n_trials, seed);
+
+        let mut observer = NullObserver;
+        let result = simulation::run_simulation_loop(sim, &mut observer);
+
+        // Extract accuracy from last 20% of trials
+        let accuracy = compute_final_accuracy(&result.metrics, 0.2);
+        all_accuracies.push(accuracy);
+        println!("[Seed {}] accuracy={:.1}%", s, accuracy * 100.0);
+    }
+
+    // Aggregate statistics
+    let mean = all_accuracies.iter().sum::<f64>() / n_seeds as f64;
+    let variance = all_accuracies.iter().map(|&a| (a - mean).powi(2)).sum::<f64>() / n_seeds as f64;
+    let std_dev = variance.sqrt();
+
+    println!("\n=== Multi-seed Results ({} seeds) ===", n_seeds);
+    println!("  mean accuracy: {:.1}%", mean * 100.0);
+    println!("  std dev:       {:.1}%", std_dev * 100.0);
+    println!("  min:           {:.1}%", all_accuracies.iter().cloned().fold(f64::INFINITY, f64::min) * 100.0);
+    println!("  max:           {:.1}%", all_accuracies.iter().cloned().fold(f64::NEG_INFINITY, f64::max) * 100.0);
+
+    // Export CSV
+    let csv_path = "multi_seed_results.csv";
+    let mut csv = String::from("seed,accuracy\n");
+    for (i, &acc) in all_accuracies.iter().enumerate() {
+        csv.push_str(&format!("{},{:.6}\n", base_seed + i as u64, acc));
+    }
+    csv.push_str(&format!("mean,{:.6}\n", mean));
+    csv.push_str(&format!("std,{:.6}\n", std_dev));
+    fs::write(csv_path, &csv).expect("Failed to write CSV");
+    println!("Results exported to {}", csv_path);
+}
+
+/// Compute accuracy over the last `frac` of snapshots from metrics log.
+fn compute_final_accuracy(metrics: &MetricsLog, frac: f64) -> f64 {
+    let n = metrics.snapshots.len();
+    if n == 0 { return 0.0; }
+    let start = (n as f64 * (1.0 - frac)) as usize;
+    let mut correct = 0usize;
+    let mut total = 0usize;
+    for snap in &metrics.snapshots[start..] {
+        if snap.output_decision.is_some() {
+            total += 1;
+            if snap.current_reward > 0.0 {
+                correct += 1;
+            }
+        }
+    }
+    if total == 0 { 0.0 } else { correct as f64 / total as f64 }
+}
+
+fn run_single(config: &SimConfig) {
     // V4/V5 : lancement en mode entraînement avec trials
     let mut sim = Simulation::new(config.clone());
 

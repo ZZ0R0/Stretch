@@ -72,11 +72,20 @@ struct GpuParams {
     zone_k_gain: f32,           // 172
     // --- Stimulus groups ---
     stimulus_group_size: u32,   // 176
+    // --- V5.2 additions ---
+    reset_policy: u32,          // 180
+    adaptive_decay_enabled: u32,// 184
+    k_local: f32,               // 188
+    reverberation_enabled: u32, // 192
+    reverb_gain: f32,           // 196
+    rpe_delta: f32,             // 200
+    rho_boost: f32,             // 204
+    plasticity_disabled: u32,   // 208
+    num_classes: u32,           // 212
     // --- Padding to 16-byte alignment ---
-    _pad0: u32,                 // 180
-    _pad1: u32,                 // 184
-    _pad2: u32,                 // 188
-    // Total: 192 bytes (divisible by 16)
+    _pad0: u32,                 // 216
+    _pad1: u32,                 // 220
+    // Total: 224 bytes (divisible by 16)
 };
 
 struct GpuEdge {

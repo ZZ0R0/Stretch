@@ -62,21 +62,36 @@ struct GpuParams {
     zone_k_theta: f32,
     zone_k_gain: f32,
     stimulus_group_size: u32,
+    reset_policy: u32,
+    adaptive_decay_enabled: u32,
+    k_local: f32,
+    reverberation_enabled: u32,
+    reverb_gain: f32,
+    rpe_delta: f32,
+    rho_boost: f32,
+    plasticity_disabled: u32,
+    num_classes: u32,
     _pad0: u32,
     _pad1: u32,
-    _pad2: u32,
 };
 
 @group(0) @binding(0) var<storage, read_write> nodes: array<GpuNode>;
 @group(0) @binding(1) var<storage, read>       stimulus_groups: array<u32>;
 @group(0) @binding(2) var<uniform>             params: GpuParams;
 
-// Reset all node activations to 0 (dispatched at trial start)
+// Reset activations based on V5.2 reset_policy (dispatched at trial start)
+// 0 = full (all to 0), 1 = partial (keep 10%), 2 = none
 @compute @workgroup_size(256)
 fn reset_activations(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(num_workgroups) nwg: vec3<u32>) {
     let idx = gid.y * (nwg.x * 256u) + gid.x;
     if (idx >= params.num_nodes) { return; }
-    nodes[idx].activation = 0.0;
+    let policy = params.reset_policy;
+    if (policy == 0u) {
+        nodes[idx].activation = 0.0;
+    } else if (policy == 1u) {
+        nodes[idx].activation *= 0.1;
+    }
+    // policy == 2u (none): do nothing
 }
 
 // Inject stimulus into input group nodes

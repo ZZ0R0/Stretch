@@ -62,9 +62,17 @@ struct GpuParams {
     zone_k_theta: f32,
     zone_k_gain: f32,
     stimulus_group_size: u32,
+    reset_policy: u32,
+    adaptive_decay_enabled: u32,
+    k_local: f32,
+    reverberation_enabled: u32,
+    reverb_gain: f32,
+    rpe_delta: f32,
+    rho_boost: f32,
+    plasticity_disabled: u32,
+    num_classes: u32,
     _pad0: u32,
     _pad1: u32,
-    _pad2: u32,
 };
 
 @group(0) @binding(0) var<storage, read_write> nodes: array<GpuNode>;
@@ -126,9 +134,11 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(num_workgroups) 
     // Excitability from trace
     node.excitability = 1.0 + 0.1 * min(node.memory_trace, 5.0);
 
-    // Activation decay
-    node.activation *= (1.0 - effective_decay);
-    node.activation = max(node.activation, params.activation_min);
+    // Activation decay (skip if adaptive_decay handles it separately)
+    if (params.adaptive_decay_enabled == 0u) {
+        node.activation *= (1.0 - effective_decay);
+        node.activation = max(node.activation, params.activation_min);
+    }
 
     // --- 4. Write back ---
     nodes[idx] = node;

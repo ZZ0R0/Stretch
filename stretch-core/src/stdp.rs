@@ -57,6 +57,9 @@ pub fn update_plasticity_stdp_budget(
     dopamine_level: f64,
     reward_center: Option<[f64; 3]>,
     tick: usize,
+    // V5.2: RPE-modulated forgetting
+    rpe_delta: f32,
+    rho_boost: f32,
     // Reusable buffers (managed by caller)
     activation_ticks_buf: &mut Vec<Option<usize>>,
     node_delta_dopa_buf: &mut Vec<f32>,
@@ -218,8 +221,10 @@ pub fn update_plasticity_stdp_budget(
         }
 
         // --- 4. Décroissance homéostatique ---
+        // V5.2: accelerated forgetting when RPE is negative
+        let rho_eff = homeostatic_rate + rho_boost * (-rpe_delta).max(0.0);
         if !edge.consolidated {
-            edge.conductance += homeostatic_rate * (baseline_cond - edge.conductance);
+            edge.conductance += rho_eff * (baseline_cond - edge.conductance);
             edge.conductance = edge.conductance.clamp(cond_min, cond_max);
         }
 
