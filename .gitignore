@@ -1,4 +1,5 @@
 /target
 edge_conductances.json
 node_traces.json
-metrics_output.jsonv5_diagnostics.json
+metrics_output.json
+v5_diagnostics.json
