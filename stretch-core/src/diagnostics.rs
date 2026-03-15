@@ -60,6 +60,10 @@ pub fn trace_best_path(
     min_cond: f32,
 ) -> Option<TracedPath> {
     let n = domain.num_nodes();
+    // Guard: outgoing CSR may be empty after GPU compaction
+    if domain.outgoing.offsets.len() <= n || domain.edges.is_empty() {
+        return None;
+    }
     let target_set: HashSet<usize> = targets.iter().copied().collect();
 
     let mut dist = vec![f64::INFINITY; n];
