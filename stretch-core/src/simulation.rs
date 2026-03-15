@@ -60,6 +60,10 @@ pub struct VizMetrics {
     pub mean_pid_error: f64,
     pub mean_pid_output: f64,
     pub pid_mode: String,
+    // V6
+    pub v6_sparsity_enabled: bool,
+    pub v6_dopa_mod_enabled: bool,
+    pub v6_novelty_active: usize,
 }
 
 /// Lightweight snapshot for visualization — contains only rendering data.
@@ -542,6 +546,9 @@ impl Simulation {
             mean_pid_error: self.zone_manager.mean_pid_error(),
             mean_pid_output: self.zone_manager.mean_pid_output(),
             pid_mode: self.config.zones.pid_mode.clone(),
+            v6_sparsity_enabled: self.config.v6_sparsity.enabled,
+            v6_dopa_mod_enabled: self.config.v6_dopa_modulation.enabled,
+            v6_novelty_active: self.buf_first_activation_tick.iter().filter(|&&t| t < u32::MAX).count(),
         };
 
         // Energy sparkline history

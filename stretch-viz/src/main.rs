@@ -250,31 +250,35 @@ impl VizState {
 
         // Top edges by conductance deviation from 1.0
         let domain = &self.sim.domain;
-        let mut devs: Vec<(usize, f32)> = domain.edges.iter()
-            .enumerate()
-            .map(|(i, e)| (i, (e.conductance - 1.0).abs()))
-            .filter(|(_, d)| *d > 0.01)
-            .collect();
-        devs.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
         self.cached_top_edges.clear();
-        for &(ei, _) in devs.iter().take(MAX_TOP_EDGES) {
-            let e = &domain.edges[ei];
-            self.cached_top_edges.push((e.from, e.to, e.conductance));
+        if !domain.edges.is_empty() {
+            let mut devs: Vec<(usize, f32)> = domain.edges.iter()
+                .enumerate()
+                .map(|(i, e)| (i, (e.conductance - 1.0).abs()))
+                .filter(|(_, d)| *d > 0.01)
+                .collect();
+            devs.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+            for &(ei, _) in devs.iter().take(MAX_TOP_EDGES) {
+                let e = &domain.edges[ei];
+                self.cached_top_edges.push((e.from, e.to, e.conductance));
+            }
         }
 
         // Node-level mean outgoing conductance (for conductance view mode)
         let n = domain.num_nodes();
         self.cached_node_cond.resize(n, 0.0);
-        for i in 0..n {
-            let start = domain.outgoing.offsets[i];
-            let end = domain.outgoing.offsets[i + 1];
-            if start < end {
-                let sum: f32 = (start..end)
-                    .map(|k| domain.edges[domain.outgoing.edge_indices[k]].conductance)
-                    .sum();
-                self.cached_node_cond[i] = sum / (end - start) as f32;
-            } else {
-                self.cached_node_cond[i] = 0.0;
+        if domain.outgoing.offsets.len() > n && !domain.edges.is_empty() {
+            for i in 0..n {
+                let start = domain.outgoing.offsets[i];
+                let end = domain.outgoing.offsets[i + 1];
+                if start < end {
+                    let sum: f32 = (start..end)
+                        .map(|k| domain.edges[domain.outgoing.edge_indices[k]].conductance)
+                        .sum();
+                    self.cached_node_cond[i] = sum / (end - start) as f32;
+                } else {
+                    self.cached_node_cond[i] = 0.0;
+                }
             }
         }
 
@@ -322,7 +326,7 @@ impl VizState {
 // ---------------------------------------------------------------------------
 fn window_conf() -> Conf {
     Conf {
-        window_title: "Stretch V5 — Visualisation 3D".to_string(),
+        window_title: "Stretch V6 — Visualisation 3D".to_string(),
         window_width: 1400,
         window_height: 900,
         window_resizable: true,
@@ -732,6 +736,20 @@ fn draw_sidebar(snap: &VizSnapshot, viz: &VizState) {
         y += line_h * 0.3;
         draw_label(&mut y, "Excit:", &format!("{}", m.active_excitatory));
         draw_label(&mut y, "Inhib:", &format!("{}", m.active_inhibitory));
+    }
+
+    // ── V6 info ──
+    if m.v6_sparsity_enabled || m.v6_dopa_mod_enabled {
+        y += line_h * 0.3;
+        draw_text("--- V6 ---", x, y, 15.0, Color::new(0.4, 1.0, 0.8, 1.0));
+        y += line_h * 1.2;
+        if m.v6_sparsity_enabled {
+            draw_label(&mut y, "Sparsity:", "ON");
+            draw_label(&mut y, "Novelty:", &format!("{} nodes", m.v6_novelty_active));
+        }
+        if m.v6_dopa_mod_enabled {
+            draw_label(&mut y, "Dopa mod:", "ON");
+        }
     }
 
     // ── Diagnostics info (if computed) ──
