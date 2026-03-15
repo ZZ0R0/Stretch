@@ -1,7 +1,8 @@
 use std::env;
 use std::fs;
 
-use stretch_core::config::SimConfig;
+use stretch_core::config::{SimConfig, V5TaskMode};
+use stretch_core::diagnostics;
 use stretch_core::metrics::MetricsLog;
 use stretch_core::simulation::{self, Simulation, NullObserver};
 
@@ -29,9 +30,15 @@ fn main() {
         SimConfig::default()
     };
 
-    // V4 : lancement en mode entraînement avec trials, via run_with_observer
+    // V4/V5 : lancement en mode entraînement avec trials
     let mut sim = Simulation::new(config.clone());
-    let n_trials = sim.setup_v4_training();
+
+    let is_v5 = config.v5_task.task_mode != V5TaskMode::Legacy;
+    let n_trials = if is_v5 {
+        sim.setup_v5_training()
+    } else {
+        sim.setup_v4_training()
+    };
 
     // Spatial diagnostics
     print_spatial_diagnostics(&sim);
@@ -39,7 +46,13 @@ fn main() {
     let trial_period = if n_trials > 1 {
         sim.trials[1].start_tick - sim.trials[0].start_tick
     } else { 0 };
-    println!("[V4 Training] {} trials programmés ({} classes, période={})", n_trials, config.input.num_classes, trial_period);
+    let version_tag = if is_v5 {
+        format!("V5 {:?}", config.v5_task.task_mode)
+    } else {
+        "V4".to_string()
+    };
+    println!("[{} Training] {} trials programmés ({} classes, période={})",
+        version_tag, n_trials, config.input.num_classes, trial_period);
 
     let mut observer = NullObserver;
     let result = simulation::run_simulation_loop(sim, &mut observer);
@@ -108,6 +121,46 @@ fn main() {
     fs::write("edge_conductances.json", &edges_json)
         .expect("Impossible d'écrire edge_conductances.json");
     println!("  modified edges exported: {}", edge_data.len());
+
+    // === V5 Diagnostics ===
+    if is_v5 && config.v5_diagnostics.path_tracer {
+        eprintln!("[V5] Running post-simulation diagnostics...");
+
+        let extent = config.domain.domain_extent;
+        let group_size = config.input.group_size;
+
+        let placement = stretch_core::task::place_io(
+            &result.domain,
+            &config.v5_task.task_mode,
+            config.input.num_classes,
+            group_size,
+            extent,
+        );
+
+        let _initial_conds: Option<Vec<f32>> = None; // Not available post-sim
+        let report = diagnostics::run_diagnostics(
+            &result.domain,
+            &placement.input_groups,
+            &placement.output_groups,
+            &placement.target_mapping,
+            false, // No CT without initial conductances
+            None,
+        );
+        diagnostics::print_diagnostic_report(&report);
+
+        // Export diagnostic report
+        let diag_json = serde_json::json!({
+            "route_scores_target": report.route_scores_target,
+            "route_scores_competitor": report.route_scores_competitor,
+            "directional_indices": report.directional_indices,
+            "topological_coherence": report.topological_coherence,
+            "sustain_ratio": report.sustain_ratio,
+        });
+        fs::write("v5_diagnostics.json",
+            serde_json::to_string_pretty(&diag_json).unwrap())
+            .expect("Failed to write v5_diagnostics.json");
+        println!("V5 diagnostics exported to v5_diagnostics.json");
+    }
 
     // Histogramme traces
     let histogram = MetricsLog::trace_histogram(&result.domain, 10);

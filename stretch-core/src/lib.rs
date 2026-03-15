@@ -1,4 +1,6 @@
+pub mod calibration;
 pub mod config;
+pub mod diagnostics;
 pub mod domain;
 pub mod dopamine;
 pub mod edge;
@@ -14,4 +16,6 @@ pub mod reward;
 pub mod simulation;
 pub mod stdp;
 pub mod stimulus;
+pub mod sustained;
+pub mod task;
 pub mod zone;

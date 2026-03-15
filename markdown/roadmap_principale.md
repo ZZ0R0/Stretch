@@ -1,26 +1,22 @@
-# Roadmap principale — révision post-V3
-## Versioning sans versions intermédiaires
+# Roadmap principale — révision post-V4
+## Stretch : trajectoire corrigée à partir du système réellement obtenu
 
-## 1. Objet du document
+## 1. Objet
 
-Ce document remplace la version précédente de la roadmap post-V3 avec une règle explicite :
+Ce document remplace la roadmap précédente à partir de la sortie réelle de la V4.
 
-> **aucune version intermédiaire de type V3.x, V4.x, etc.**
+Il prend en compte :
 
-Lorsqu’un palier technique supplémentaire est nécessaire pour valider de nouvelles briques, on :
-- **élargit la version supérieure** ;
-- ou **on crée directement une version majeure suivante**.
+- les aboutissements techniques effectifs de la V4 ;
+- les instabilités encore ouvertes en V4 ;
+- la vision post-V4 orientée vers la V5 ;
+- la contrainte de versioning sans versions intermédiaires.
 
-Les validations partielles deviennent donc :
-- des **gates** ;
-- des **jalons internes** ;
-- des **sous-phases de travail**,
-
-mais **jamais** des numéros de version intermédiaires.
+Le but n’est pas de prolonger mécaniquement la roadmap antérieure, mais de la recaler sur la réalité du système.
 
 ---
 
-## 2. Base considérée comme acquise
+## 2. Ce qui est désormais acquis
 
 ### V0 — substrat dynamique minimal
 - propagation locale ;
@@ -35,529 +31,376 @@ mais **jamais** des numéros de version intermédiaires.
 - KD-tree ;
 - calibration 3D ;
 - visualisation 3D ;
-- formalisation mathématique complète.
+- formalisation mathématique.
 
 ### V2 — activité endogène régulée
 - partitionnement spatial ;
 - PID ;
 - pacemakers ;
-- consolidation mémoire structurelle ;
+- consolidation structurelle ;
 - activité auto-entretenue.
 
-### V3 — transition vers des dynamiques internes
-- neurones excitateurs / inhibiteurs ;
+### V3 — dynamiques internes crédibles
+- neurones E/I ;
 - propagation signée ;
 - PID indirect ;
 - STDP ;
 - budget synaptique compétitif ;
-- passage à 500k nœuds sur CPU parallèle ;
-- substrat moins homogène et plus auto-organisé.
+- scale 500k nœuds CPU ;
+- substrat moins homogène.
+
+### V4 — infrastructure d’apprentissage scalable
+- architecture GPU-first ;
+- pipeline de plasticité complet :
+  STDP → éligibilité → 3 facteurs → homéostasie → consolidation → budget synaptique ;
+- performance très supérieure à V3 ;
+- compression mémoire forte ;
+- exécution jusqu’à 5M nœuds et 57M arêtes ;
+- portabilité GPU via wgpu.
 
 ---
 
-## 3. Diagnostic post-V3
+## 3. Diagnostic post-V4
 
-La V3 a validé un vrai saut qualitatif, mais elle laisse ouverts plusieurs verrous structurants :
+La V4 a résolu un bloc énorme d’infrastructure.
+Stretch possède maintenant ses jambes : performance, échelle, pipeline, GPU compute.
 
-- oscillations émergentes encore à confirmer strictement ;
-- consolidation encore trop rapide sous fort fond d’activité ;
-- STDP encore trop symétrique ;
-- absence de dopamine ;
-- absence de récompense ;
-- absence de traces d’éligibilité ;
-- absence d’interface d’entrée et de sortie ;
-- absence de hiérarchie régionale ;
-- différenciation neuronale encore limitée ;
-- distance encore importante avant une symbolisation ou une boucle textuelle.
+Mais la V4 n’a pas encore prouvé que le système possède son cerveau.
 
-La conséquence principale est simple :
+### 3.1 Limites critiques observées
 
-> la suite du projet est plus difficile que prévu initialement
-
-et la roadmap doit être allongée.
+- le réseau fonctionne en régime flash & die ;
+- l’activité n’est pas soutenue, mais pulsée ;
+- l’accuracy 100% observée peut être expliquée par un biais topologique ;
+- aucune preuve propre de chemins dopaminergiques n’a encore été démontrée ;
+- les modifications de conductance restent faibles et symétriques ;
+- l’éligibilité décroît trop vite par rapport au délai de reward ;
+- le PID travaille sur un régime non stationnaire ;
+- les paramètres ne scalent pas proprement de 50k à 5M ;
+- l’infrastructure est validée, mais l’apprentissage véritable ne l’est pas encore.
 
 ---
 
-## 4. Nouvelle règle de progression
+## 4. Conséquence sur la roadmap
 
-La roadmap ne doit plus être pensée comme une chaîne trop compacte du type :
+Le problème prioritaire n’est plus :
+- la hiérarchie ;
+- la spécialisation riche ;
+- les assemblées ;
+- la symbolisation.
 
-```text
-compétition → hiérarchie → mémoire → assemblées → symboles → texte
-```
+Le problème prioritaire est désormais :
 
-mais comme une montée par blocs mieux ordonnés :
+> prouver que le réseau apprend réellement au-delà du biais topologique.
 
-```text
-V3 acquis
-→ V4 dopamine / reward / éligibilité / I/O minimales
-→ V5 mémoire guidée et compétition réelle
-→ V6 hiérarchie de zones
-→ V7 spécialisation riche
-→ V8 assemblées et mémoire de travail
-→ V9 séquences et prédiction
-→ V10 symbolisation
-→ V11 boucle linguistique externe minimale
-→ V12 agent textuel émergent minimal
-```
+Autrement dit, la V5 devient une version de validation scientifique du modèle, de calibration multi-échelle et de stabilisation dynamique.
 
 ---
 
-## 5. Nouvelle roadmap à partir de V4
+## 5. Nouvelle logique de progression
 
 ```text
-V0   substrat dynamique minimal                    acquis
-V1   espace 3D non-grid                            acquis
-V2   régulation locale et activité endogène        acquis
-V3   inhibition, STDP, PID indirect                acquis / consolidé
-
-V4   dopamine, reward, éligibilité, I/O minimales
-V5   mémoire sélective guidée + compétition locale réelle
-V6   hiérarchie de zones et régulation multi-échelle
-V7   spécialisation neuronale riche et canaux multiples
-V8   assemblées dynamiques et mémoire de travail
-V9   chaînage, prédiction temporelle et proto-raisonnement
-V10  symbolisation et interface discrète
-V11  boucle linguistique externe minimale
-V12  agent textuel émergent minimal
+V4 acquis
+→ V5 preuve d’apprentissage réelle + calibration multi-échelle + dynamique soutenue
+→ V6 formation de chemins, mémoire guidée robuste et reward prediction minimale
+→ V7 hiérarchie de zones et routage multi-échelle
+→ V8 spécialisation neuronale riche et canaux multiples
+→ V9 assemblées dynamiques et mémoire de travail
+→ V10 chaînage, prédiction temporelle et proto-raisonnement
+→ V11 symbolisation et interface discrète
+→ V12 boucle linguistique externe minimale
+→ V13 agent textuel émergent minimal
 ```
 
 ---
 
-# 6. V4 — Dopamine, reward, éligibilité, entrées/sorties minimales
+## 6. Roadmap consolidée
 
-## 6.1 Intention
+```text
+V0   substrat dynamique minimal                               acquis
+V1   espace 3D non-grid                                       acquis
+V2   régulation locale et activité endogène                   acquis
+V3   inhibition, STDP, PID indirect                           acquis
+V4   dopamine, reward, éligibilité, I/O minimales + GPU-first acquis
 
-La V4 doit faire franchir au projet un cap fondamental :
-
-passer d’un substrat auto-organisé à un substrat qui peut commencer à apprendre **en fonction d’un objectif**.
-
-La V4 absorbe aussi les validations post-V3 qui auraient sinon donné lieu à une pseudo-version intermédiaire.
-
-## 6.2 Objectifs
-
-- finaliser les points ouverts de stabilité post-V3 dans le cadre de la V4 ;
-- introduire un canal dopaminergique minimal ;
-- introduire un reward externe simple ;
-- introduire des traces d’éligibilité ;
-- introduire une entrée minimale structurée ;
-- introduire une sortie minimale interprétable.
-
-## 6.3 Transformations majeures
-
-### A. Stabilisation post-V3 intégrée à la V4
-La V4 doit inclure, comme prérequis internes :
-- validation ou réfutation propre des oscillations émergentes ;
-- recalibration E/I si nécessaire ;
-- STDP asymétrique si la V3 symétrique est insuffisante ;
-- réduction supplémentaire de la consolidation parasite.
-
-### B. Voies dopaminergiques minimales
-- niveau tonique ;
-- bursts ;
-- dips ;
-- modulation de la STDP ;
-- gating de consolidation.
-
-### C. Traces d’éligibilité
-- trace locale par arête ;
-- décroissance temporelle ;
-- couplage eligibility × reward.
-
-### D. Entrée minimale
-- sous-graphe d’entrée ;
-- patterns simples ;
-- séparation nette entre données externes et fond interne.
-
-### E. Sortie minimale
-- sous-graphe de sortie ;
-- lecture de décision simple ;
-- readout comportemental élémentaire.
-
-## 6.4 Ce que la V4 doit prouver
-
-- le reward modifie réellement ce qui est appris ;
-- l’entrée n’est plus une simple injection arbitraire ;
-- la sortie est interprétable ;
-- la plasticité devient partiellement guidée ;
-- les derniers doutes majeurs post-V3 sont levés ou tranchés dans le cadre de la V4.
-
-## 6.5 Critères d’acceptation
-
-- STDP seule vs STDP+reward produit des apprentissages différents ;
-- deux patterns d’entrée distincts mènent à deux réponses distinctes ;
-- une tâche simple obtient une performance au-dessus du hasard ;
-- la dopamine module l’apprentissage sans devenir un nouveau PID masqué ;
-- les oscillations émergentes ont été soit validées, soit proprement reclassées comme non nécessaires pour la suite immédiate.
+V5   preuve d’apprentissage réelle, calibration multi-échelle, dynamique soutenue
+V6   formation de chemins dopaminergiques, mémoire guidée robuste, reward prediction minimale
+V7   hiérarchie de zones et routage multi-échelle
+V8   spécialisation neuronale riche et canaux multiples
+V9   assemblées dynamiques et mémoire de travail
+V10  chaînage, prédiction temporelle et proto-raisonnement
+V11  symbolisation et interface discrète
+V12  boucle linguistique externe minimale
+V13  agent textuel émergent minimal
+```
 
 ---
 
-# 7. V5 — Mémoire sélective guidée et compétition locale réelle
+# 7. V5 — Preuve d’apprentissage réelle, calibration multi-échelle, dynamique soutenue
 
 ## 7.1 Intention
 
-Après introduction de reward et d’éligibilité, la mémoire doit devenir réellement **sélective et utile**.
+La V5 doit répondre à une question unique et non négociable :
+
+> le réseau apprend-il réellement, ou la topologie fait-elle encore le travail à sa place ?
+
+La V5 devient donc la version de :
+- preuve ;
+- calibration ;
+- stabilisation dynamique ;
+- diagnostic scientifique.
 
 ## 7.2 Objectifs
 
-- consolider en fonction de la valeur ;
-- rendre la compétition locale réellement discriminante ;
-- limiter fortement la mémoire parasite ;
-- raffiner la STDP asymétrique.
+- éliminer les biais topologiques des tâches ;
+- prouver l’existence d’un apprentissage au-delà de la géométrie ;
+- stabiliser une activité plus soutenue ;
+- adapter les hyperparamètres à l’échelle ;
+- fournir des outils diagnostics permettant de lire ce qui est appris.
 
 ## 7.3 Transformations majeures
 
-- consolidation sous reward ;
-- gating événementiel ;
-- seuils adaptatifs de consolidation ;
-- compétition locale renforcée ;
-- winner-take-all local plus robuste ;
-- sélection des motifs utiles.
+### A. Tâches anti-biais topologique
+- I/O symétriques ;
+- associations inversées ;
+- re-routing ;
+- inversion de mapping après pré-entraînement.
 
-## 7.4 Ce que doit prouver la V5
+### B. Baselines strictes
+- random baseline ;
+- topologie-only baseline ;
+- full learning baseline.
 
-- le système n’apprend plus seulement ce qui est fréquent ;
-- il apprend davantage ce qui est pertinent ou récompensé ;
-- la mémoire devient plus rare, plus informative, plus stable.
+### C. Calibration multi-échelle
+Hyperparamètres adaptatifs selon `n`, `extent`, `group_size`, `read_delay`, etc.
+
+### D. Dynamique soutenue
+- decay adaptatif ;
+- activité réverbérante locale ;
+- connexions récurrentes ;
+- présentations plus longues ;
+- suppression ou réduction des resets destructeurs.
+
+### E. Outils de compréhension
+- heatmaps de conductance 3D ;
+- path tracer ;
+- timeline eligibility / conductance ;
+- analyse de clusters de co-renforcement.
+
+## 7.4 Ce que la V5 doit prouver
+
+- l’accuracy reste > hasard sur des tâches sans biais topologique ;
+- des routes se forment effectivement entre entrée et sortie ;
+- la dynamique devient moins flash & die ;
+- les paramètres scalent mieux au-delà de 50k.
 
 ## 7.5 Critères d’acceptation
 
-- baisse nette de la consolidation parasite ;
-- motifs gagnants plus localisés ;
-- amélioration mesurable sur tâche récompensée ;
-- stabilité globale conservée.
+- au moins une tâche anti-biais est apprise ;
+- le réseau avec plasticité surpasse la baseline topologie-only ;
+- les chemins renforcés sont topologiquement cohérents ;
+- l’activité soutenue progresse sans instabilité globale ;
+- un protocole de preuve d’apprentissage est archivé et reproductible.
 
 ---
 
-# 8. V6 — Hiérarchie de zones et régulation multi-échelle
+# 8. V6 — Formation de chemins dopaminergiques, mémoire guidée robuste, reward prediction minimale
 
 ## 8.1 Intention
 
-Reconstruire l’architecture régionale sur une base désormais orientée vers l’apprentissage et la valeur.
+Une fois la preuve d’apprentissage réelle obtenue, la V6 doit consolider ce qui manque encore :
+- rendre les chemins appris robustes ;
+- stabiliser une mémoire guidée moins fragile ;
+- commencer à prédire la valeur ou la récompense au lieu de simplement y réagir.
 
 ## 8.2 Objectifs
 
-- micro / méso / macro-zones ;
-- contrôle multi-échelle ;
-- budgets régionaux ;
-- modulation descendante ;
-- répartition fonctionnelle plus claire.
+- formation explicite de routes préférentielles ;
+- consolidation plus robuste et plus localisée ;
+- meilleure résistance à l’homéostasie érosive ;
+- première forme de reward prediction ou valeur locale.
 
-## 8.3 Transformations majeures
+## 8.3 Ce que doit prouver la V6
 
-- zones hiérarchiques ;
-- métriques régionales ;
-- modulation top-down ;
-- contraintes énergétiques ;
-- re-partitionnement partiel si nécessaire.
-
-## 8.4 Ce que doit prouver la V6
-
-- certaines zones intègrent ;
-- certaines relaient ;
-- certaines arbitrent ;
-- la hiérarchie améliore stabilité et lisibilité.
-
-## 8.5 Critères d’acceptation
-
-- rôles régionaux mesurables ;
-- coordination multi-zones ;
-- spécialisation régionale visible ;
-- compatibilité avec reward et I/O.
+- les chemins formés persistent assez pour être réutilisés ;
+- la récompense n’est plus seulement consommée, elle commence à être anticipée ;
+- la mémoire utile résiste mieux au bruit et au temps.
 
 ---
 
-# 9. V7 — Spécialisation neuronale riche et canaux multiples
+# 9. V7 — Hiérarchie de zones et routage multi-échelle
 
 ## 9.1 Intention
 
-Passer d’une différenciation principalement E/I à une diversité neuronale réellement fonctionnelle.
+Une fois l’apprentissage réel et les chemins robustes établis, il devient pertinent d’introduire une architecture régionale hiérarchique.
 
 ## 9.2 Objectifs
 
-- enrichir `NeuronType` ;
-- introduire plusieurs constantes de temps et rôles ;
-- ajouter au moins un canal modulateur supplémentaire si nécessaire ;
-- préparer mémoire de travail et assemblées.
-
-## 9.3 Transformations majeures
-
-Familles possibles :
-- relais rapides ;
-- intégrateurs lents ;
-- neurones mémoire ;
-- oscillatoires ;
-- sortie ;
-- interneurones rapides/lents.
-
-Canaux possibles :
-- dopamine ;
-- saillance / attention ;
-- modulation lente tonique.
-
-## 9.4 Ce que doit prouver la V7
-
-- la diversité neuronale améliore réellement le système ;
-- certaines fonctions deviennent dépendantes de certains types ;
-- la complexité ajoutée reste contrôlable.
-
-## 9.5 Critères d’acceptation
-
-- ablations parlantes ;
-- spécialisation régionale accrue ;
-- gains mesurables sur mémoire, stabilité ou décision.
+- micro / méso / macro-zones ;
+- routage multi-échelle ;
+- budgets régionaux ;
+- zones spécialisées par rôle ;
+- modulation descendante simple.
 
 ---
 
-# 10. V8 — Assemblées dynamiques et mémoire de travail
+# 10. V8 — Spécialisation neuronale riche et canaux multiples
 
 ## 10.1 Intention
 
-Faire émerger des groupes fonctionnels identifiables, réactivables et compétitifs.
+Après hiérarchie, on peut diversifier réellement les neurones.
 
 ## 10.2 Objectifs
 
-- formation d’assemblées ;
-- maintien temporaire ;
-- dissolution ;
-- réactivation partielle ;
-- mémoire de travail active.
-
-## 10.3 Transformations majeures
-
-- détection d’assemblées ;
-- maintien récurrent ;
-- inhibition inter-assemblées ;
-- replay local ;
-- compétitions entre motifs.
-
-## 10.4 Ce que doit prouver la V8
-
-- un motif peut être maintenu après le stimulus ;
-- un motif partiel peut rappeler le motif complet ;
-- plusieurs assemblées peuvent entrer en compétition.
-
-## 10.5 Critères d’acceptation
-
-- assemblées détectables ;
-- mémoire de travail > quelques dizaines de ticks ;
-- réactivation partielle mesurable ;
-- winner-take-all non trivial.
+- dépasser E/I ;
+- introduire sous-types fonctionnels ;
+- ajouter au moins un canal modulateur supplémentaire si utile ;
+- préparer la mémoire active.
 
 ---
 
-# 11. V9 — Chaînage, prédiction temporelle et proto-raisonnement
+# 11. V9 — Assemblées dynamiques et mémoire de travail
 
 ## 11.1 Intention
 
-Passer des assemblées à leurs transitions.
+Faire émerger des groupes réactivables qui peuvent porter une information au-delà du stimulus immédiat.
 
 ## 11.2 Objectifs
+
+- formation d’assemblées ;
+- maintien temporaire ;
+- réactivation partielle ;
+- compétition entre assemblées ;
+- mémoire de travail active.
+
+---
+
+# 12. V10 — Chaînage, prédiction temporelle et proto-raisonnement
+
+## 12.1 Intention
+
+Passer des assemblées isolées à leurs transitions.
+
+## 12.2 Objectifs
 
 - apprendre A→B→C ;
 - produire des prédictions temporelles ;
 - maintenir un contexte interne court ;
-- tester des boucles d’évaluation simples.
-
-## 11.3 Transformations majeures
-
-- transitions entre assemblées ;
-- chaînage ;
-- prédiction ;
-- erreurs locales de prédiction ;
-- premiers scénarios séquentiels.
-
-## 11.4 Ce que doit prouver la V9
-
-- séquences rejouables ;
-- alternatives départageables ;
-- contexte simple conservé ;
-- début de proto-raisonnement séquentiel.
-
-## 11.5 Critères d’acceptation
-
-- réussite sur chaînes simples ;
-- prédiction meilleure que le hasard ;
-- stabilité séquentielle multi-run.
+- initier des boucles de comparaison attente / résultat.
 
 ---
 
-# 12. V10 — Symbolisation et interface discrète
-
-## 12.1 Intention
-
-Avant le texte, il faut une couche de représentations discrètes manipulables.
-
-## 12.2 Objectifs
-
-- construire un petit vocabulaire interne ;
-- associer motifs / assemblées / chaînes à des unités discrètes ;
-- manipuler de petites entrées / sorties discrètes.
-
-## 12.3 Transformations majeures
-
-- tokenisation interne ;
-- dictionnaire de motifs ;
-- encodeur/décodeur discret ;
-- catégorisation élémentaire.
-
-## 12.4 Ce que doit prouver la V10
-
-- existence de symboles internes stables ;
-- relations simples entre symboles ;
-- readout discret fiable.
-
-## 12.5 Critères d’acceptation
-
-- quelques symboles robustes ;
-- rappel symbolique simple ;
-- transitions symboliques simples réussies.
-
----
-
-# 13. V11 — Boucle linguistique externe minimale
+# 13. V11 — Symbolisation et interface discrète
 
 ## 13.1 Intention
 
-Séparer la symbolisation interne de la première interface linguistique externe.
+Avant le texte, il faut une couche discrète stable.
 
 ## 13.2 Objectifs
 
-- entrée texte très limitée ;
-- sortie texte rudimentaire ;
-- mapping texte ↔ symboles internes ;
-- micro-contexte.
-
-## 13.3 Transformations majeures
-
-- dictionnaire externe minimal ;
-- tokenisation textuelle simple ;
-- boucle d’échange très contrainte.
-
-## 13.4 Ce que doit prouver la V11
-
-- lien réel entre texte externe et états internes ;
-- réponses sur petit vocabulaire ;
-- conservation du sujet immédiat.
-
-## 13.5 Critères d’acceptation
-
-- micro-échanges simples ;
-- rappel immédiat ;
-- cohérence locale rudimentaire.
+- vocabulaire interne minimal ;
+- association motifs ↔ symboles ;
+- encodeur/décodeur discret ;
+- readout symbolique.
 
 ---
 
-# 14. V12 — Agent textuel émergent minimal
+# 14. V12 — Boucle linguistique externe minimale
 
 ## 14.1 Intention
 
-Construire un premier agent textuel de très bas niveau à partir des briques précédentes.
+Relier la couche symbolique au texte externe.
 
 ## 14.2 Objectifs
+
+- entrée textuelle minimale ;
+- sortie textuelle rudimentaire ;
+- micro-contexte ;
+- mapping texte ↔ symboles internes.
+
+---
+
+# 15. V13 — Agent textuel émergent minimal
+
+## 15.1 Intention
+
+Construire un premier agent textuel de très bas niveau.
+
+## 15.2 Objectifs
 
 - mini-conversation ;
 - petite mémoire récente ;
 - patrons textuels appris ;
 - comportement local orienté but.
 
-## 14.3 Ce que doit prouver la V12
+---
 
-- plusieurs tours très courts ;
-- maintien d’une consigne locale ;
-- rappel très récent ;
-- comportement supérieur à un simple réflexe direct.
+## 16. Sprint transversal — Performance et outils
 
-## 14.4 Critères d’acceptation
+À partir de maintenant, l’axe transversal ne doit plus prioritairement être faire tourner plus vite, mais :
 
-- mini-dialogues simples ;
-- cohérence locale sur quelques tours ;
-- apprentissage incrémental de patrons.
+- maintenir la performance ;
+- améliorer la visualisation ;
+- renforcer les outils diagnostics ;
+- automatiser les grid-search et benchmarks.
+
+Axes transversaux recommandés :
+- performance GPU continue ;
+- visualisation 3D des conductances ;
+- traçage des chemins ;
+- check-pointing ;
+- dashboards de calibration multi-échelle.
 
 ---
 
-## 15. Sprint transversal — Accélération GPU
+## 17. Gates expérimentaux corrigés
 
-L’accélération GPU reste un sujet transversal.
-
-### Déclenchement conseillé
-- dès V4 si reward + I/O + éligibilité rendent les sweeps trop lents ;
-- impératif au plus tard entre V5 et V7 si la cible reste ≥500k nœuds avec instrumentation riche.
-
-### Portée cible
-- propagation ;
-- STDP ;
-- traces d’éligibilité ;
-- métriques bulk ;
-- rendu instancié ;
-- certains calculs hiérarchiques si utile.
-
----
-
-## 16. Gates expérimentaux corrigés
-
-### Gate A — fin V4
+### Gate A — fin V5
 Pas de poursuite si :
-- reward n’influe pas réellement sur l’apprentissage ;
-- entrée/sortie minimales restent arbitraires ;
-- points ouverts post-V3 non tranchés rendent les résultats ambigus.
+- l’apprentissage au-delà du biais topologique n’est pas démontré ;
+- les baselines ne sont pas battues ;
+- les chemins appris ne sont pas cohérents.
 
-### Gate B — fin V8
+### Gate B — fin V9
 Pas de poursuite symbolique si :
 - pas d’assemblées stables ;
 - pas de mémoire de travail exploitable ;
 - pas de réactivation partielle crédible.
 
-### Gate C — fin V10
-Pas de boucle textuelle si :
+### Gate C — fin V11
+Pas de boucle linguistique si :
 - les symboles internes sont trop instables ;
-- le readout discret est artificiel ou non réutilisable.
+- le readout discret est artificiel.
 
 ---
 
-## 17. Priorité réelle
+## 18. Priorité réelle
 
-L’ordre stratégique corrigé devient :
-
-1. **V4** — dopamine, reward, éligibilité, I/O minimales ;
-2. **V5** — mémoire guidée et compétition réelle ;
-3. **V6** — hiérarchie de zones ;
-4. **V7** — spécialisation riche ;
-5. **V8** — assemblées et mémoire de travail ;
-6. **V9** — séquences et prédiction ;
-7. **V10** — symbolisation ;
-8. **V11** — boucle linguistique externe ;
-9. **V12** — agent textuel minimal.
+1. V5 — preuve d’apprentissage réelle, calibration multi-échelle, dynamique soutenue ;
+2. V6 — chemins dopaminergiques robustes, mémoire guidée robuste, reward prediction minimale ;
+3. V7 — hiérarchie de zones ;
+4. V8 — spécialisation riche ;
+5. V9 — assemblées et mémoire de travail ;
+6. V10 — séquences et proto-raisonnement ;
+7. V11 — symbolisation ;
+8. V12 — boucle linguistique externe ;
+9. V13 — agent textuel minimal.
 
 ---
 
-## 18. Conclusion
+## 19. Conclusion
 
-La correction post-V3 change fortement la suite du projet.
+La V4 a donné au projet son infrastructure d’apprentissage scalable.
 
-Le projet a maintenant besoin, beaucoup plus tôt que prévu, de :
+Mais elle n’a pas encore donné :
+- la preuve formelle d’apprentissage ;
+- la preuve de formation de chemins ;
+- une dynamique soutenue crédible ;
+- une calibration multi-échelle robuste.
 
-- **dopamine**
-- **reward**
-- **éligibilité**
-- **entrée**
-- **sortie**
-
-et ces briques doivent être absorbées directement par **V4**, sans créer de version intermédiaire.
-
-La roadmap corrigée devient donc :
-
-```text
-V4   dopamine, reward, éligibilité, I/O minimales
-V5   mémoire sélective guidée + compétition locale réelle
-V6   hiérarchie de zones et régulation multi-échelle
-V7   spécialisation neuronale riche et canaux multiples
-V8   assemblées dynamiques et mémoire de travail
-V9   chaînage, prédiction temporelle et proto-raisonnement
-V10  symbolisation et interface discrète
-V11  boucle linguistique externe minimale
-V12  agent textuel émergent minimal
-```
-
-Cette version respecte la contrainte de versioning :
-**pas de V3.x, pas de versions intermédiaires, uniquement des versions supérieures.**
+Ces points doivent être traités avant toute montée vers :
+- hiérarchie ;
+- spécialisation ;
+- assemblées ;
+- symbolisation ;
+- texte.

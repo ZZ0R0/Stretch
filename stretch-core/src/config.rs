@@ -52,6 +52,18 @@ pub struct SimConfig {
     /// V4.2 : compute backend configuration
     #[serde(default)]
     pub compute: ComputeConfig,
+    /// V5 : configuration des tâches anti-biais
+    #[serde(default)]
+    pub v5_task: V5TaskConfig,
+    /// V5 : calibration multi-échelle
+    #[serde(default)]
+    pub v5_calibration: V5CalibrationConfig,
+    /// V5 : dynamique soutenue
+    #[serde(default)]
+    pub v5_sustained: V5SustainedConfig,
+    /// V5 : diagnostics
+    #[serde(default)]
+    pub v5_diagnostics: V5DiagnosticsConfig,
 }
 
 /// V4.2 : Compute backend configuration
@@ -412,6 +424,179 @@ fn default_activation_min() -> f64 {
     0.01
 }
 
+// =========================================================================
+// V5 Configuration Structs
+// =========================================================================
+
+/// V5 : Mode de tâche anti-biais topologique
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum V5TaskMode {
+    /// V4 classique : input-0 près output-0, input-1 près output-1
+    Legacy,
+    /// Symétrique : toutes les I/O à distances comparables (au centre du cube)
+    Symmetric,
+    /// Inversé : input-0 → output-1, input-1 → output-0 (contre la géométrie)
+    Inverted,
+    /// Re-apprentissage : d'abord normal, puis inversé à mi-parcours
+    Remap,
+}
+
+impl Default for V5TaskMode {
+    fn default() -> Self { V5TaskMode::Legacy }
+}
+
+/// V5 : Mode de baseline
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum V5BaselineMode {
+    /// Apprentissage complet (plasticité active)
+    FullLearning,
+    /// Topologie seule : plasticité désactivée
+    TopologyOnly,
+    /// Baseline aléatoire : poids random, pas d'apprentissage
+    RandomBaseline,
+}
+
+impl Default for V5BaselineMode {
+    fn default() -> Self { V5BaselineMode::FullLearning }
+}
+
+/// V5 : Configuration de la tâche
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct V5TaskConfig {
+    /// Mode de placement I/O
+    #[serde(default)]
+    pub task_mode: V5TaskMode,
+    /// Mode de baseline
+    #[serde(default)]
+    pub baseline_mode: V5BaselineMode,
+    /// Tick auquel inverser le mapping (pour Remap)
+    #[serde(default = "default_remap_tick")]
+    pub remap_at_tick: usize,
+    /// Nombre de ticks de présentation (écrase le hardcodé V4 si > 0)
+    #[serde(default)]
+    pub presentation_ticks: usize,
+    /// Inverser le mapping cible (classe 0→sortie 1, classe 1→sortie 0)
+    #[serde(default)]
+    pub invert_mapping: bool,
+}
+
+fn default_remap_tick() -> usize { 2500 }
+
+impl Default for V5TaskConfig {
+    fn default() -> Self {
+        V5TaskConfig {
+            task_mode: V5TaskMode::Legacy,
+            baseline_mode: V5BaselineMode::FullLearning,
+            remap_at_tick: default_remap_tick(),
+            presentation_ticks: 0,
+            invert_mapping: false,
+        }
+    }
+}
+
+/// V5 : Calibration multi-échelle
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct V5CalibrationConfig {
+    /// Activer la calibration adaptative
+    #[serde(default)]
+    pub enabled: bool,
+    /// Taille de réseau de référence pour les lois adaptatives
+    #[serde(default = "default_ref_n")]
+    pub ref_n: usize,
+    /// gain de référence (à ref_n)
+    #[serde(default = "default_ref_gain")]
+    pub ref_gain: f64,
+    /// group_size minimal
+    #[serde(default = "default_group_size_min")]
+    pub group_size_min: usize,
+}
+
+fn default_ref_n() -> usize { 50_000 }
+fn default_ref_gain() -> f64 { 0.8 }
+fn default_group_size_min() -> usize { 20 }
+
+impl Default for V5CalibrationConfig {
+    fn default() -> Self {
+        V5CalibrationConfig {
+            enabled: false,
+            ref_n: default_ref_n(),
+            ref_gain: default_ref_gain(),
+            group_size_min: default_group_size_min(),
+        }
+    }
+}
+
+/// V5 : Dynamique soutenue
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct V5SustainedConfig {
+    /// Activer le decay adaptatif
+    #[serde(default)]
+    pub adaptive_decay: bool,
+    /// Facteur k_local pour le decay adaptatif : alpha_eff = alpha * (1 - k_local * local_activity)
+    #[serde(default = "default_k_local")]
+    pub k_local: f64,
+    /// Activer la réverbération locale
+    #[serde(default)]
+    pub reverberation: bool,
+    /// Gain de réverbération : phi_eff = phi + r_local * phi_prev
+    #[serde(default = "default_reverb_gain")]
+    pub reverb_gain: f64,
+    /// Politique de reset — "full" (V4), "partial" (garde 10% activation), "none"
+    #[serde(default = "default_reset_policy")]
+    pub reset_policy: String,
+}
+
+fn default_k_local() -> f64 { 0.3 }
+fn default_reverb_gain() -> f64 { 0.15 }
+fn default_reset_policy() -> String { "full".into() }
+
+impl Default for V5SustainedConfig {
+    fn default() -> Self {
+        V5SustainedConfig {
+            adaptive_decay: false,
+            k_local: default_k_local(),
+            reverberation: false,
+            reverb_gain: default_reverb_gain(),
+            reset_policy: default_reset_policy(),
+        }
+    }
+}
+
+/// V5 : Configuration diagnostics
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct V5DiagnosticsConfig {
+    /// Activer le path tracer
+    #[serde(default)]
+    pub path_tracer: bool,
+    /// Activer le calcul de cohérence topologique (CT)
+    #[serde(default)]
+    pub topological_coherence: bool,
+    /// Activer le calcul de sustain ratio
+    #[serde(default)]
+    pub sustain_ratio: bool,
+    /// Intervalle (en trials) entre les diagnostics
+    #[serde(default = "default_diag_interval")]
+    pub interval: usize,
+    /// Nombre de meilleurs chemins à tracer
+    #[serde(default = "default_top_paths")]
+    pub top_paths: usize,
+}
+
+fn default_diag_interval() -> usize { 50 }
+fn default_top_paths() -> usize { 5 }
+
+impl Default for V5DiagnosticsConfig {
+    fn default() -> Self {
+        V5DiagnosticsConfig {
+            path_tracer: false,
+            topological_coherence: false,
+            sustain_ratio: false,
+            interval: default_diag_interval(),
+            top_paths: default_top_paths(),
+        }
+    }
+}
+
 impl Default for SimConfig {
     fn default() -> Self {
         SimConfig {
@@ -480,6 +665,10 @@ impl Default for SimConfig {
             input: InputConfig::default(),
             output: OutputConfig::default(),
             compute: ComputeConfig::default(),
+            v5_task: V5TaskConfig::default(),
+            v5_calibration: V5CalibrationConfig::default(),
+            v5_sustained: V5SustainedConfig::default(),
+            v5_diagnostics: V5DiagnosticsConfig::default(),
         }
     }
 }

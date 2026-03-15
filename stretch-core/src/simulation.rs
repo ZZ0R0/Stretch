@@ -2,7 +2,9 @@ use rayon::prelude::*;
 
 use std::sync::Arc;
 
-use crate::config::SimConfig;
+use crate::calibration;
+use crate::config::{SimConfig, V5TaskMode, V5BaselineMode};
+use crate::diagnostics::SustainTracker;
 use crate::domain::Domain;
 use crate::dopamine::DopamineSystem;
 use crate::gpu::{GpuContext, GpuParams};
@@ -15,6 +17,8 @@ use crate::propagation;
 use crate::reward::RewardSystem;
 use crate::stdp;
 use crate::stimulus;
+use crate::sustained;
+use crate::task;
 use crate::zone::ZoneManager;
 
 /// Compute backend: CPU (default) or GPU (wgpu).
@@ -140,6 +144,8 @@ pub struct Trial {
     pub start_tick: usize,
     pub presentation_ticks: usize,
     pub read_delay: usize,
+    /// V5 : classe cible (peut différer de class pour inversé/remap)
+    pub target_class: usize,
 }
 
 // ---------------------------------------------------------------------------
@@ -175,6 +181,17 @@ pub struct Simulation {
     pub backend: ComputeBackend,
     // --- Monitoring ---
     pub perf: PerfMonitor,
+    // --- V5 additions ---
+    /// V5 : mapping cible (classe_input → classe_output)
+    pub target_mapping: Vec<usize>,
+    /// V5 : snapshot conductances initiales (pour CT)
+    pub initial_conductances: Option<Vec<f32>>,
+    /// V5 : buffer pour la réverbération (activations tick-1)
+    buf_prev_activations: Vec<f32>,
+    /// V5 : tracker de sustain ratio
+    pub sustain_tracker: SustainTracker,
+    /// V5 : plasticité désactivée (baseline topology-only)
+    pub plasticity_disabled: bool,
 }
 
 pub struct SimulationResult {
@@ -185,6 +202,10 @@ pub struct SimulationResult {
 impl Simulation {
     pub fn new(config: SimConfig) -> Self {
         init_thread_pool();
+
+        // V5 : appliquer la calibration multi-échelle AVANT la construction
+        let mut config = config;
+        calibration::apply_calibration(&mut config);
 
         let mut domain = Domain::from_config(
             &config.domain,
@@ -263,6 +284,11 @@ impl Simulation {
             cached_dopa_center: None,
             backend,
             perf,
+            target_mapping: vec![0, 1], // default: identity mapping
+            initial_conductances: None,
+            buf_prev_activations: vec![0.0; n_nodes],
+            sustain_tracker: SustainTracker::new(),
+            plasticity_disabled: false,
         }
     }
 
@@ -315,6 +341,7 @@ impl Simulation {
                 start_tick,
                 presentation_ticks,
                 read_delay,
+                target_class: class, // V4 legacy: target = input class
             });
         }
 
@@ -335,6 +362,99 @@ impl Simulation {
             // CPU mode: only drop kdtree (not needed after spatial setup)
             self.domain.drop_kdtree();
         }
+
+        n_trials
+    }
+
+    /// V5 : Configuration complète avec tâches anti-biais, baselines et calibration.
+    pub fn setup_v5_training(&mut self) -> usize {
+        let config = self.config.clone();
+        let extent = config.domain.domain_extent;
+        let group_size = config.input.group_size;
+        let task_mode = &config.v5_task.task_mode;
+        let baseline_mode = &config.v5_task.baseline_mode;
+
+        // V5 : placement I/O selon le mode de tâche
+        let placement = task::place_io(
+            &self.domain,
+            task_mode,
+            config.input.num_classes,
+            group_size,
+            extent,
+        );
+
+        if let Some(ref mut encoder) = self.input_encoder {
+            encoder.groups = placement.input_groups.clone();
+        }
+        if let Some(ref mut reader) = self.output_reader {
+            reader.groups = placement.output_groups.clone();
+        }
+        // V5 : appliquer inversion du mapping si demandé (indépendant de la géométrie)
+        let effective_mapping: Vec<usize> = if config.v5_task.invert_mapping {
+            placement.target_mapping.iter().copied().rev().collect()
+        } else {
+            placement.target_mapping.clone()
+        };
+        self.target_mapping = effective_mapping.clone();
+
+        // V5 : appliquer le mode baseline
+        task::apply_baseline_mode(&mut self.domain, baseline_mode, config.simulation.seed);
+        if *baseline_mode == V5BaselineMode::TopologyOnly
+            || *baseline_mode == V5BaselineMode::RandomBaseline
+        {
+            self.plasticity_disabled = true;
+        }
+
+        // Présentation : configurable ou fallback V4
+        let presentation_ticks = if config.v5_task.presentation_ticks > 0 {
+            config.v5_task.presentation_ticks
+        } else {
+            5
+        };
+        let read_delay = config.output.read_delay;
+        let inter_trial_gap = 15;
+        let warmup_ticks = 20;
+
+        let mut trials = task::generate_trials(
+            config.input.num_classes,
+            &effective_mapping,
+            config.simulation.total_ticks,
+            presentation_ticks,
+            read_delay,
+            warmup_ticks,
+            inter_trial_gap,
+        );
+
+        // V5 Remap : inverser le mapping à mi-parcours
+        if *task_mode == V5TaskMode::Remap {
+            let inverted_mapping: Vec<usize> = (0..config.input.num_classes).rev().collect();
+            task::remap_trials(&mut trials, config.v5_task.remap_at_tick, &inverted_mapping);
+        }
+
+        let n_trials = trials.len();
+        self.schedule_trials(trials);
+
+        // V5 : sauvegarder les conductances initiales (pour CT)
+        if config.v5_diagnostics.topological_coherence {
+            let initial: Vec<f32> = self.domain.edges.iter().map(|e| e.conductance).collect();
+            self.initial_conductances = Some(initial);
+        }
+
+        // Compact / GPU upload
+        if let ComputeBackend::Gpu(ref gpu) = self.backend {
+            let stim_groups: Vec<Vec<usize>> = self.input_encoder.as_ref()
+                .map(|e| e.groups.clone()).unwrap_or_default();
+            let read_groups: Vec<Vec<usize>> = self.output_reader.as_ref()
+                .map(|r| r.groups.clone()).unwrap_or_default();
+            gpu.upload_io_groups(&stim_groups, &read_groups);
+            self.domain.compact_for_gpu();
+        } else {
+            self.domain.drop_kdtree();
+        }
+
+        // V5 : log le mode de tâche
+        eprintln!("[V5] task_mode={:?}, baseline={:?}, mapping={:?}",
+            task_mode, baseline_mode, &self.target_mapping);
 
         n_trials
     }
@@ -519,7 +639,7 @@ impl Simulation {
             }
             if tick >= trial.start_tick && tick < trial.start_tick + trial.presentation_ticks {
                 stimulus_class = trial.class as i32;
-                self.last_target = Some(trial.class);
+                self.last_target = Some(trial.target_class);
             }
             let read_tick = trial.start_tick + trial.presentation_ticks + trial.read_delay;
             if tick == read_tick {
@@ -680,21 +800,25 @@ impl Simulation {
             pacemaker::apply_pacemakers(&mut self.domain, &config.pacemakers, tick);
         }
 
-        // === Phase 3 : V4 — injection d'entrée ===
+        // === Phase 3 : V4/V5 — injection d'entrée ===
+        let mut in_stimulus = false;
         if let Some(ref encoder) = self.input_encoder {
             if self.current_trial < self.trials.len() {
                 let trial = &self.trials[self.current_trial];
                 if tick == trial.start_tick {
-                    for node in self.domain.nodes.iter_mut() {
-                        node.activation = 0.0;
-                    }
+                    // V5 : politique de reset configurable
+                    sustained::apply_reset_policy(&mut self.domain, &config.v5_sustained.reset_policy);
                 }
                 if tick >= trial.start_tick && tick < trial.start_tick + trial.presentation_ticks {
                     encoder.inject(&mut self.domain, trial.class, config.input.intensity);
-                    self.last_target = Some(trial.class);
+                    self.last_target = Some(trial.target_class);
+                    in_stimulus = true;
                 }
             }
         }
+
+        // V5 : sustain ratio tracking
+        self.sustain_tracker.set_in_stimulus(in_stimulus);
 
         self.perf.end_phase(Phase::StimInput);
 
@@ -717,8 +841,56 @@ impl Simulation {
 
         self.perf.end_phase(Phase::Propagation);
 
-        // === Phase 5 : Dissipation parallèle (C5: skip equilibrium nodes) ===
-        {
+        // === Phase 4b : V5 — Réverbération locale (avant dissipation) ===
+        if config.v5_sustained.reverberation && config.v5_sustained.reverb_gain > 0.0 {
+            sustained::apply_reverberation(
+                &mut self.domain,
+                &self.buf_prev_activations,
+                config.v5_sustained.reverb_gain as f32,
+            );
+        }
+
+        // V5 : snapshot activations pour la réverbération du tick suivant
+        if config.v5_sustained.reverberation {
+            sustained::snapshot_activations(&self.domain, &mut self.buf_prev_activations);
+        }
+
+        // V5 : enregistrer l'énergie pour le sustain ratio
+        if config.v5_diagnostics.sustain_ratio {
+            let energy: f64 = self.domain.nodes.iter().map(|n| n.activation as f64).sum();
+            self.sustain_tracker.record_energy(energy);
+        }
+
+        // === Phase 5 : Dissipation parallèle ===
+        if config.v5_sustained.adaptive_decay {
+            // V5 : decay adaptatif
+            sustained::apply_adaptive_decay(
+                &mut self.domain,
+                config.dissipation.activation_decay as f32,
+                config.v5_sustained.k_local as f32,
+                config.dissipation.activation_min as f32,
+            );
+            // Still need fatigue/inhibition/trace updates
+            let fatigue_gain = config.dissipation.fatigue_gain as f32;
+            let fatigue_recovery = config.dissipation.fatigue_recovery as f32;
+            let inhibition_gain = config.dissipation.inhibition_gain as f32;
+            let inhibition_decay_rate = config.dissipation.inhibition_decay as f32;
+            let trace_gain = config.dissipation.trace_gain as f32;
+            let trace_decay = config.dissipation.trace_decay as f32;
+            self.domain.nodes.par_iter_mut()
+                .zip(self.domain.node_needs_update.par_iter_mut())
+                .for_each(|(node, needs_update)| {
+                    if !*needs_update && !node.is_active()
+                        && node.fatigue < 0.01 && node.inhibition < 0.01
+                    { return; }
+                    node.update_fatigue(fatigue_gain, fatigue_recovery);
+                    node.update_inhibition(inhibition_gain, inhibition_decay_rate);
+                    node.update_trace(trace_gain, trace_decay);
+                    node.update_excitability_from_trace();
+                    *needs_update = node.is_active() || node.fatigue > 0.01 || node.inhibition > 0.01;
+                });
+        } else {
+            // V4 classique : decay fixe avec jitter
             let base_decay = config.dissipation.activation_decay as f32;
             let jitter = config.dissipation.decay_jitter as f32;
             let activation_min = config.dissipation.activation_min as f32;
@@ -762,15 +934,15 @@ impl Simulation {
                         || node.fatigue > 0.01
                         || node.inhibition > 0.01;
                 });
-        }
+        } // end else (V4 dissipation)
 
         self.perf.end_phase(Phase::Dissipation);
 
         // === Phase 5b : Décroissance naturelle dopamine ===
         self.dopamine_system.update(0.0, &config.dopamine);
 
-        // === Phase 6 : Plasticité (CPU) ===
-        {
+        // === Phase 6 : Plasticité (CPU) — V5 : désactivable pour baselines ===
+        if !self.plasticity_disabled {
             let dopamine_level = self.dopamine_system.level as f64;
             let reward_center = self.reward_center;
             stdp::update_plasticity_stdp_budget(
@@ -926,7 +1098,7 @@ pub fn run_with_observer(config: &SimConfig, observer: &mut dyn SimulationObserv
     let max_trace = sim.domain.nodes.iter().map(|n| n.memory_trace).fold(0.0_f32, f32::max);
     let max_cond = sim.domain.edges.iter().map(|e| e.conductance).fold(0.0_f32, f32::max);
 
-    println!("\n=== Fin simulation V4 ===");
+    println!("\n=== Fin simulation ===");
     println!("  Nœuds actifs finaux : {}", active_final);
     println!("  Énergie finale      : {:.4}", energy_final);
     println!("  Trace max           : {:.4}", max_trace);
@@ -959,8 +1131,15 @@ pub fn run_simulation_loop(mut sim: Simulation, observer: &mut dyn SimulationObs
     observer.on_init(&sim.domain, &config);
 
     let ticks_label = if sim.total_ticks() == 0 { "∞".to_string() } else { sim.total_ticks().to_string() };
+    let is_v5 = config.v5_task.task_mode != crate::config::V5TaskMode::Legacy;
+    let version_label = if is_v5 {
+        format!("V5 [{:?}/{:?}]", config.v5_task.task_mode, config.v5_task.baseline_mode)
+    } else {
+        "V4 [dopamine+reward]".to_string()
+    };
     println!(
-        "=== Simulation V4 [dopamine+reward] ===\nTopologie: {} | Nœuds: {}, Liaisons: {}, Ticks: {} | Zones: {}",
+        "=== Simulation {} ===\nTopologie: {} | Nœuds: {}, Liaisons: {}, Ticks: {} | Zones: {}",
+        version_label,
         config.domain.topology,
         sim.domain.num_nodes(),
         sim.domain.num_edges(),
@@ -998,7 +1177,7 @@ pub fn run_simulation_loop(mut sim: Simulation, observer: &mut dyn SimulationObs
 
     let active_final = sim.domain.nodes.iter().filter(|n| n.is_active()).count();
     let energy_final: f32 = sim.domain.nodes.iter().map(|n| n.activation).sum();
-    println!("\n=== Fin simulation V4 ===");
+    println!("\n=== Fin simulation {} ===", version_label);
     println!("  Nœuds actifs finaux : {}", active_final);
     println!("  Énergie finale      : {:.4}", energy_final);
     if sim.total_evaluated > 0 {

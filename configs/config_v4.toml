@@ -24,7 +24,7 @@
 # --- Graphe spatial -----------------------------------------------------------
 [domain]
 topology = "knn_3d"       # knn_3d | radius_3d | random_sparse | grid2d
-size = 5000000              # 50k nœuds
+size = 500000              # 50k nœuds
 k_neighbors = 10          # ~577k arêtes bidirectionnelles
 domain_extent = 100.0     # cube 100³
 seed = 42
