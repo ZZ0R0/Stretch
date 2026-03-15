@@ -14,6 +14,7 @@ pub mod perf;
 pub mod propagation;
 pub mod reward;
 pub mod simulation;
+pub mod sparsity;
 pub mod stdp;
 pub mod stimulus;
 pub mod sustained;

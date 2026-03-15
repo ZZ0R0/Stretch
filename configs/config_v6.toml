@@ -1,0 +1,153 @@
+# ============================================================================
+# Stretch V6 — Wavefront-aware sparsity + dopamine-gated dynamics
+# ============================================================================
+# 5k nodes for fast iteration. Tests: wavefront sparsity (EF-1..5),
+# dopamine-modulated reverb/decay (EF-6..7), signal propagation to output.
+# Gate: readout_score > 0 within 200 ticks for both classes.
+# ============================================================================
+
+[domain]
+topology = "knn_3d"
+size = 5000
+k_neighbors = 10
+domain_extent = 50.0
+seed = 42
+
+[node_defaults]
+activation = 0.0
+threshold = 0.2
+fatigue = 0.0
+memory_trace = 0.0
+excitability = 1.0
+inhibition = 0.0
+
+[edge_defaults]
+conductance = 1.0
+plasticity = 1.0
+decay = 0.0001
+conductance_min = 0.1
+conductance_max = 5.0
+
+[propagation]
+kernel = "exponential"
+spatial_decay = 0.3
+gain = 0.8
+gain_inhibitory = 0.8
+
+[dissipation]
+activation_decay = 0.25
+fatigue_gain = 0.20
+fatigue_recovery = 0.05
+inhibition_gain = 0.12
+inhibition_decay = 0.03
+trace_decay = 0.005
+trace_gain = 0.1
+activation_min = 0.01
+decay_jitter = 0.15
+
+[simulation]
+total_ticks = 2000
+snapshot_interval = 5
+seed = 42
+
+[neuron_types]
+inhibitory_fraction = 0.2
+
+[zones]
+num_zones = 4
+partition_method = "voronoi"
+target_activity = 0.3
+kp = 0.5
+ki = 0.05
+kd = 0.1
+pid_output_max = 2.0
+pid_integral_max = 5.0
+pid_mode = "indirect"
+k_theta = 0.3
+k_gain = 0.2
+
+[consolidation]
+threshold = 4.0
+ticks_required = 50
+
+[stdp]
+a_plus = 0.008
+a_minus = 0.008
+tau_plus = 20.0
+tau_minus = 20.0
+
+[synaptic_budget]
+budget = 30.0
+
+[dopamine]
+tonic = 0.1
+phasic_decay = 0.15
+reward_gain = 1.0
+plasticity_gain = 3.0
+consolidation_threshold = 0.3
+phasic_max = 2.0
+spatial_lambda = 0.15
+
+[reward]
+reward_positive = 1.0
+reward_negative = -0.5
+rpe_enabled = true
+rpe_alpha = 0.05
+rho_boost = 0.01
+
+[eligibility]
+decay = 0.95
+max = 5.0
+
+[input]
+num_classes = 2
+group_size = 30
+start_node = 0
+intensity = 1.5
+
+[output]
+num_classes = 2
+group_size = 30
+start_node = 300
+read_delay = 15
+
+[compute]
+backend = "gpu"
+
+[v5_task]
+task_mode = "Symmetric"
+baseline_mode = "FullLearning"
+presentation_ticks = 8
+
+[v5_sustained]
+adaptive_decay = true
+k_local = 0.3
+reverberation = true
+reverb_gain = 0.12
+reset_policy = "partial"
+
+[v5_diagnostics]
+path_tracer = false
+sustain_ratio = true
+interval = 20
+
+# ============================================================================
+# V6: Wavefront-aware sparsity
+# ============================================================================
+[v6_sparsity]
+enabled = true
+max_active_fraction = 0.05    # 5% max active neurons
+suppress_factor = 0.0         # Hard suppression (set to 0)
+novelty_gain = 2.0            # Freshly activated neurons get 3x score boost
+novelty_window = 10           # Novelty bonus decays over 10 ticks
+
+# ============================================================================
+# V6: Dopamine-gated dynamics (search vs exploitation)
+# ============================================================================
+[v6_dopa_modulation]
+enabled = true
+reverb_min = 0.05             # Reverb in exploitation mode (high dopamine)
+reverb_max = 0.30             # Reverb in search mode (low dopamine)
+decay_mod_strength = 0.3      # Decay reduction during search (30%)
+dopa_threshold = 0.15         # Sigmoid midpoint
+dopa_kappa = 0.05             # Sigmoid steepness (smaller = sharper transition)

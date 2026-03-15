@@ -64,6 +64,12 @@ pub struct SimConfig {
     /// V5 : diagnostics
     #[serde(default)]
     pub v5_diagnostics: V5DiagnosticsConfig,
+    /// V6 : sparsité à front d'onde
+    #[serde(default)]
+    pub v6_sparsity: V6SparsityConfig,
+    /// V6 : modulation dynamique par dopamine
+    #[serde(default)]
+    pub v6_dopa_modulation: V6DopaModulationConfig,
 }
 
 /// V4.2 : Compute backend configuration
@@ -597,6 +603,88 @@ impl Default for V5DiagnosticsConfig {
     }
 }
 
+// =========================================================================
+// V6 Configuration Structs
+// =========================================================================
+
+/// V6 : Sparsité à front d'onde (wavefront-aware sparsity)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct V6SparsityConfig {
+    /// Activer la contrainte de sparsité globale
+    #[serde(default)]
+    pub enabled: bool,
+    /// Fraction maximale de neurones actifs par tick (ex: 0.05 = 5%)
+    #[serde(default = "default_max_active_fraction")]
+    pub max_active_fraction: f64,
+    /// Facteur de suppression pour les non-sélectionnés (0.0=dur, 1.0=pas de suppression)
+    #[serde(default)]
+    pub suppress_factor: f64,
+    /// Gain du bonus de nouveauté (0=pas de bonus, 2.0=les frais ont score ×3)
+    #[serde(default = "default_novelty_gain")]
+    pub novelty_gain: f64,
+    /// Fenêtre de nouveauté en ticks
+    #[serde(default = "default_novelty_window")]
+    pub novelty_window: u32,
+}
+
+fn default_max_active_fraction() -> f64 { 0.05 }
+fn default_novelty_gain() -> f64 { 2.0 }
+fn default_novelty_window() -> u32 { 10 }
+
+impl Default for V6SparsityConfig {
+    fn default() -> Self {
+        V6SparsityConfig {
+            enabled: false,
+            max_active_fraction: default_max_active_fraction(),
+            suppress_factor: 0.0,
+            novelty_gain: default_novelty_gain(),
+            novelty_window: default_novelty_window(),
+        }
+    }
+}
+
+/// V6 : Modulation dynamique par la dopamine (recherche vs exploitation)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct V6DopaModulationConfig {
+    /// Activer la modulation dopaminergique du reverb et du decay
+    #[serde(default)]
+    pub enabled: bool,
+    /// Reverb minimum (exploitation, dopamine haute)
+    #[serde(default = "default_reverb_min")]
+    pub reverb_min: f64,
+    /// Reverb maximum (recherche, dopamine basse)
+    #[serde(default = "default_reverb_max")]
+    pub reverb_max: f64,
+    /// Force de modulation du decay (0=pas de modulation, 0.3=−30% en recherche)
+    #[serde(default = "default_decay_mod_strength")]
+    pub decay_mod_strength: f64,
+    /// Seuil de dopamine pour la sigmoïde
+    #[serde(default = "default_dopa_threshold")]
+    pub dopa_threshold: f64,
+    /// Pente de la sigmoïde (plus petit = plus raide)
+    #[serde(default = "default_dopa_kappa")]
+    pub dopa_kappa: f64,
+}
+
+fn default_reverb_min() -> f64 { 0.05 }
+fn default_reverb_max() -> f64 { 0.30 }
+fn default_decay_mod_strength() -> f64 { 0.3 }
+fn default_dopa_threshold() -> f64 { 0.15 }
+fn default_dopa_kappa() -> f64 { 0.05 }
+
+impl Default for V6DopaModulationConfig {
+    fn default() -> Self {
+        V6DopaModulationConfig {
+            enabled: false,
+            reverb_min: default_reverb_min(),
+            reverb_max: default_reverb_max(),
+            decay_mod_strength: default_decay_mod_strength(),
+            dopa_threshold: default_dopa_threshold(),
+            dopa_kappa: default_dopa_kappa(),
+        }
+    }
+}
+
 impl Default for SimConfig {
     fn default() -> Self {
         SimConfig {
@@ -669,6 +757,8 @@ impl Default for SimConfig {
             v5_calibration: V5CalibrationConfig::default(),
             v5_sustained: V5SustainedConfig::default(),
             v5_diagnostics: V5DiagnosticsConfig::default(),
+            v6_sparsity: V6SparsityConfig::default(),
+            v6_dopa_modulation: V6DopaModulationConfig::default(),
         }
     }
 }

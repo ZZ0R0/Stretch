@@ -111,9 +111,22 @@ pub struct GpuParams {
     pub rho_boost: f32,
     pub plasticity_disabled: u32,
     pub num_classes: u32,
-    // --- Padding to 224 bytes (16-byte aligned) ---
-    pub _pad0: u32,
-    pub _pad1: u32,
+    // --- V6 additions (224→272 bytes) ---
+    pub sparsity_enabled: u32,
+    pub max_active_count: u32,
+    pub suppress_factor: f32,
+    pub novelty_gain: f32,
+    pub novelty_window: u32,
+    pub dopa_mod_enabled: u32,
+    pub reverb_min: f32,
+    pub reverb_max: f32,
+    pub decay_mod_strength: f32,
+    pub dopa_threshold: f32,
+    pub dopa_kappa: f32,
+    pub _pad_v6_0: u32,
+    pub _pad_v6_1: u32,
+    pub _pad_v6_2: u32,
+    // Total: 272 bytes (17 × 16)
 }
 
 /// Edge data layout for GPU buffers (32 bytes).
@@ -199,6 +212,8 @@ pub struct GpuContext {
     reverberation_pipeline: wgpu::ComputePipeline,
     adaptive_decay_pipeline: wgpu::ComputePipeline,
     snapshot_activations_pipeline: wgpu::ComputePipeline,
+    // V6: sparsity pipeline
+    sparsity_pipeline: wgpu::ComputePipeline,
     // --- Persistent GPU buffers ---
     buf_nodes: wgpu::Buffer,
     buf_edges: wgpu::Buffer,
@@ -223,6 +238,9 @@ pub struct GpuContext {
     buf_prev_activations: wgpu::Buffer,
     buf_outgoing_offsets: wgpu::Buffer,
     buf_outgoing_targets: wgpu::Buffer,
+    // V6: sparsity buffers
+    buf_first_activation_tick: wgpu::Buffer,
+    buf_sparsity_threshold: wgpu::Buffer,
     // --- Staging buffers ---
     staging_readout: wgpu::Buffer,
     staging_edges: wgpu::Buffer,
@@ -243,6 +261,8 @@ pub struct GpuContext {
     reverberation_bg: wgpu::BindGroup,
     adaptive_decay_bg: wgpu::BindGroup,
     snapshot_bg: wgpu::BindGroup,
+    // V6: sparsity bind group
+    sparsity_bg: wgpu::BindGroup,
     // --- Timestamp profiling ---
     timestamp_query_set: Option<wgpu::QuerySet>,
     timestamp_resolve_buf: Option<wgpu::Buffer>,
@@ -602,6 +622,22 @@ impl GpuContext {
 
         // Timestamp query resources (30 timestamps: begin+end for 15 phases)
         const TS_COUNT: u32 = 30;
+
+        // V6: Sparsity buffers
+        let buf_first_activation_tick = {
+            let init_data: Vec<u32> = vec![u32::MAX; num_nodes as usize];
+            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("first_activation_tick"),
+                contents: bytemuck::cast_slice(&init_data),
+                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            })
+        };
+        let buf_sparsity_threshold = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("sparsity_threshold"),
+            size: 4,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
         let (timestamp_query_set, timestamp_resolve_buf, timestamp_staging_buf) = if has_timestamps {
             let qs = device.create_query_set(&wgpu::QuerySetDescriptor {
                 label: Some("perf_timestamps"),
@@ -831,6 +867,17 @@ impl GpuContext {
             ],
         });
 
+        // V6: sparsity_bgl: nodes(rw), first_activation_tick(rw), params(uniform), sparsity_threshold(uniform)
+        let sparsity_bgl = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("sparsity_bgl"),
+            entries: &[
+                bgl_entry(0, wgpu::BufferBindingType::Storage { read_only: false }),
+                bgl_entry(1, wgpu::BufferBindingType::Storage { read_only: false }),
+                bgl_entry(2, wgpu::BufferBindingType::Uniform),
+                bgl_entry(3, wgpu::BufferBindingType::Uniform),
+            ],
+        });
+
         // ====================================================================
         // Pipelines
         // ====================================================================
@@ -870,6 +917,13 @@ impl GpuContext {
         let reverberation_pipeline = make_pipeline("reverberation", &reverberation_bgl, &reverberation_shader, "main");
         let adaptive_decay_pipeline = make_pipeline("adaptive_decay", &adaptive_decay_bgl, &adaptive_decay_shader, "main");
         let snapshot_activations_pipeline = make_pipeline("snapshot", &snapshot_bgl, &snapshot_shader, "main");
+
+        // V6: sparsity shader + pipeline
+        let sparsity_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("sparsity"),
+            source: wgpu::ShaderSource::Wgsl(include_str!("../shaders/sparsity.wgsl").into()),
+        });
+        let sparsity_pipeline = make_pipeline("sparsity", &sparsity_bgl, &sparsity_shader, "main");
 
         // ====================================================================
         // Bind groups
@@ -1017,6 +1071,18 @@ impl GpuContext {
             ],
         });
 
+        // V6: sparsity bind group
+        let sparsity_bg = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("sparsity_bg"),
+            layout: &sparsity_bgl,
+            entries: &[
+                wgpu::BindGroupEntry { binding: 0, resource: buf_nodes.as_entire_binding() },
+                wgpu::BindGroupEntry { binding: 1, resource: buf_first_activation_tick.as_entire_binding() },
+                wgpu::BindGroupEntry { binding: 2, resource: buf_params.as_entire_binding() },
+                wgpu::BindGroupEntry { binding: 3, resource: buf_sparsity_threshold.as_entire_binding() },
+            ],
+        });
+
         eprintln!(
             "[GPU] GPU-First initialized: {} nodes, {} edges, {} zones, workgroup_size={}",
             num_nodes, num_edges, num_zones, workgroup_size
@@ -1043,6 +1109,7 @@ impl GpuContext {
             reverberation_pipeline,
             adaptive_decay_pipeline,
             snapshot_activations_pipeline,
+            sparsity_pipeline,
             buf_nodes,
             buf_edges,
             buf_conductances,
@@ -1065,6 +1132,8 @@ impl GpuContext {
             buf_prev_activations,
             buf_outgoing_offsets,
             buf_outgoing_targets,
+            buf_first_activation_tick,
+            buf_sparsity_threshold,
             staging_readout,
             staging_edges,
             staging_nodes,
@@ -1082,6 +1151,7 @@ impl GpuContext {
             reverberation_bg,
             adaptive_decay_bg,
             snapshot_bg,
+            sparsity_bg,
             timestamp_query_set,
             timestamp_resolve_buf,
             timestamp_staging_buf,
@@ -1127,9 +1197,12 @@ impl GpuContext {
 
     /// Execute a complete tick on the GPU. Single CommandEncoder, single submit,
     /// zero intermediate readback. Only syncs if readout is needed.
-    pub fn run_full_tick(&self, params: &GpuParams, need_readout: bool, reset_activations: bool) {
+    pub fn run_full_tick(&self, params: &GpuParams, need_readout: bool, reset_activations: bool, sparsity_threshold: f32) {
         // Upload params uniform
         self.queue.write_buffer(&self.buf_params, 0, bytemuck::bytes_of(params));
+
+        // V6: Upload sparsity threshold
+        self.queue.write_buffer(&self.buf_sparsity_threshold, 0, bytemuck::bytes_of(&sparsity_threshold));
 
         let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("full_tick"),
@@ -1151,6 +1224,15 @@ impl GpuContext {
             pass.set_pipeline(&self.reset_pipeline);
             pass.set_bind_group(0, &self.injection_bg, &[]);
             pass.dispatch_workgroups(dispatch_nodes.0, dispatch_nodes.1, 1);
+        }
+
+        // V6: Clear first_activation_tick on trial reset
+        if reset_activations {
+            encoder.clear_buffer(&self.buf_first_activation_tick, 0, None);
+            // After clear (all zeros), we need to fill with 0xFFFFFFFF.
+            // GPU clear sets to 0, but we need u32::MAX. Upload from CPU.
+            let max_data: Vec<u32> = vec![u32::MAX; self.num_nodes as usize];
+            self.queue.write_buffer(&self.buf_first_activation_tick, 0, bytemuck::cast_slice(&max_data));
         }
 
         // Phase 1: Stimulus injection
@@ -1207,6 +1289,14 @@ impl GpuContext {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor::default());
             pass.set_pipeline(&self.apply_dissipate_pipeline);
             pass.set_bind_group(0, &self.dissipate_bg, &[]);
+            pass.dispatch_workgroups(dispatch_nodes.0, dispatch_nodes.1, 1);
+        }
+
+        // Phase 7a: V6 Sparsity enforcement (wavefront-aware, between dissipation and reverb)
+        {
+            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor::default());
+            pass.set_pipeline(&self.sparsity_pipeline);
+            pass.set_bind_group(0, &self.sparsity_bg, &[]);
             pass.dispatch_workgroups(dispatch_nodes.0, dispatch_nodes.1, 1);
         }
 
@@ -1504,6 +1594,12 @@ impl GpuContext {
     /// Check if GPU timestamp profiling is available.
     pub fn has_timestamp_profiling(&self) -> bool {
         self.timestamp_query_set.is_some()
+    }
+
+    /// V6: Fast read of per-node activations from GPU (for sparsity threshold computation).
+    pub fn read_activations_fast(&self, num_nodes: usize) -> Vec<f32> {
+        let nodes = self.download_nodes();
+        nodes.iter().take(num_nodes).map(|n| n.activation).collect()
     }
 
     /// Read readout scores after run_full_tick with need_readout=true.

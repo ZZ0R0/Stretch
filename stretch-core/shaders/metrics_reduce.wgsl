@@ -86,8 +86,21 @@ struct GpuParams {
     rho_boost: f32,
     plasticity_disabled: u32,
     num_classes: u32,
-    _pad0: u32,
-    _pad1: u32,
+    // V6 fields
+    sparsity_enabled: u32,
+    max_active_count: u32,
+    suppress_factor: f32,
+    novelty_gain: f32,
+    novelty_window: u32,
+    dopa_mod_enabled: u32,
+    reverb_min: f32,
+    reverb_max: f32,
+    decay_mod_strength: f32,
+    dopa_threshold: f32,
+    dopa_kappa: f32,
+    _pad_v6_0: u32,
+    _pad_v6_1: u32,
+    _pad_v6_2: u32,
 };
 
 // Output layout: 16 × u32 = 64 bytes

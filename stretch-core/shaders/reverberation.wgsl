@@ -71,8 +71,21 @@ struct GpuParams {
     rho_boost: f32,
     plasticity_disabled: u32,
     num_classes: u32,
-    _pad0: u32,
-    _pad1: u32,
+    // V6 fields
+    sparsity_enabled: u32,
+    max_active_count: u32,
+    suppress_factor: f32,
+    novelty_gain: f32,
+    novelty_window: u32,
+    dopa_mod_enabled: u32,
+    reverb_min: f32,
+    reverb_max: f32,
+    decay_mod_strength: f32,
+    dopa_threshold: f32,
+    dopa_kappa: f32,
+    _pad_v6_0: u32,
+    _pad_v6_1: u32,
+    _pad_v6_2: u32,
 };
 
 @group(0) @binding(0) var<storage, read_write> nodes: array<GpuNode>;
@@ -86,7 +99,16 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(num_workgroups) 
     if (params.reverberation_enabled == 0u) { return; }
 
     let prev = prev_activations[idx];
-    let reverb = params.reverb_gain * prev;
+
+    // V6: Dopamine-modulated reverberation gain
+    var eff_reverb_gain = params.reverb_gain;
+    if (params.dopa_mod_enabled == 1u) {
+        // Sigmoid: high when dopamine is low (search phase), low when high (exploitation)
+        let sig = 1.0 / (1.0 + exp((params.dopamine_level - params.dopa_threshold) / max(params.dopa_kappa, 0.001)));
+        eff_reverb_gain = params.reverb_min + (params.reverb_max - params.reverb_min) * sig;
+    }
+
+    let reverb = eff_reverb_gain * prev;
     if (reverb > 0.001) {
         nodes[idx].activation = min(nodes[idx].activation + reverb, 5.0);
     }

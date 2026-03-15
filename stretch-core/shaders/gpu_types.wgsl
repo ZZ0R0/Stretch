@@ -82,10 +82,22 @@ struct GpuParams {
     rho_boost: f32,             // 204
     plasticity_disabled: u32,   // 208
     num_classes: u32,           // 212
-    // --- Padding to 16-byte alignment ---
-    _pad0: u32,                 // 216
-    _pad1: u32,                 // 220
-    // Total: 224 bytes (divisible by 16)
+    // --- V6 additions (224→272 bytes) ---
+    sparsity_enabled: u32,      // 216
+    max_active_count: u32,      // 220
+    suppress_factor: f32,       // 224
+    novelty_gain: f32,          // 228
+    novelty_window: u32,        // 232
+    dopa_mod_enabled: u32,      // 236
+    reverb_min: f32,            // 240
+    reverb_max: f32,            // 244
+    decay_mod_strength: f32,    // 248
+    dopa_threshold: f32,        // 252
+    dopa_kappa: f32,            // 256
+    _pad_v6_0: u32,             // 260
+    _pad_v6_1: u32,             // 264
+    _pad_v6_2: u32,             // 268
+    // Total: 272 bytes (17 × 16)
 };
 
 struct GpuEdge {

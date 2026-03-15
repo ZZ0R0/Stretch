@@ -208,6 +208,8 @@ pub struct Simulation {
     pub sustain_tracker: SustainTracker,
     /// V5 : plasticité désactivée (baseline topology-only)
     pub plasticity_disabled: bool,
+    /// V6 : tick de première activation par neurone (u32::MAX = jamais)
+    buf_first_activation_tick: Vec<u32>,
 }
 
 pub struct SimulationResult {
@@ -305,6 +307,7 @@ impl Simulation {
             buf_prev_activations: vec![0.0; n_nodes],
             sustain_tracker: SustainTracker::new(),
             plasticity_disabled: false,
+            buf_first_activation_tick: vec![u32::MAX; n_nodes],
         }
     }
 
@@ -762,6 +765,11 @@ impl Simulation {
             }
         }
 
+        // V6: Reset first_activation_tick at trial start
+        if ctx.reset_activations && config.v6_sparsity.enabled {
+            crate::sparsity::reset_first_activation_tick(&mut self.buf_first_activation_tick);
+        }
+
         // --- Upload spatial dopamine if reward center changed ---
         if let Some(center) = self.reward_center {
             if self.cached_dopa_center.as_ref() != Some(&center) {
@@ -841,13 +849,42 @@ impl Simulation {
             rho_boost: config.reward.rho_boost as f32,
             plasticity_disabled: if self.plasticity_disabled { 1 } else { 0 },
             num_classes: config.input.num_classes as u32,
-            _pad0: 0,
-            _pad1: 0,
+            // V6 fields
+            sparsity_enabled: if config.v6_sparsity.enabled { 1 } else { 0 },
+            max_active_count: ((self.domain.num_nodes() as f64) * config.v6_sparsity.max_active_fraction) as u32,
+            suppress_factor: config.v6_sparsity.suppress_factor as f32,
+            novelty_gain: config.v6_sparsity.novelty_gain as f32,
+            novelty_window: config.v6_sparsity.novelty_window,
+            dopa_mod_enabled: if config.v6_dopa_modulation.enabled { 1 } else { 0 },
+            reverb_min: config.v6_dopa_modulation.reverb_min as f32,
+            reverb_max: config.v6_dopa_modulation.reverb_max as f32,
+            decay_mod_strength: config.v6_dopa_modulation.decay_mod_strength as f32,
+            dopa_threshold: config.v6_dopa_modulation.dopa_threshold as f32,
+            dopa_kappa: config.v6_dopa_modulation.dopa_kappa as f32,
+            _pad_v6_0: 0,
+            _pad_v6_1: 0,
+            _pad_v6_2: 0,
+        };
+
+        // V6: Compute sparsity threshold on CPU (from previous tick's activations)
+        let sparsity_threshold = if config.v6_sparsity.enabled {
+            if let ComputeBackend::Gpu(ref gpu) = self.backend {
+                crate::sparsity::compute_sparsity_threshold(
+                    &gpu.read_activations_fast(self.domain.num_nodes()),
+                    &self.buf_first_activation_tick,
+                    tick as u32,
+                    &config.v6_sparsity,
+                )
+            } else {
+                0.0
+            }
+        } else {
+            0.0
         };
 
         // --- Single GPU submit ---
         if let ComputeBackend::Gpu(ref gpu) = self.backend {
-            gpu.run_full_tick(&gpu_params, ctx.need_readout, ctx.reset_activations);
+            gpu.run_full_tick(&gpu_params, ctx.need_readout, ctx.reset_activations, sparsity_threshold);
         }
 
         self.perf.end_phase(Phase::GpuTick);
@@ -891,6 +928,10 @@ impl Simulation {
             if ctx.reset_activations {
                 // V5 : politique de reset configurable
                 sustained::apply_reset_policy(&mut self.domain, &config.v5_sustained.reset_policy);
+                // V6 : reset first_activation_tick
+                if config.v6_sparsity.enabled {
+                    crate::sparsity::reset_first_activation_tick(&mut self.buf_first_activation_tick);
+                }
             }
             if ctx.in_stimulus {
                 if let Some(trial) = self.trials.get(self.current_trial) {
@@ -923,6 +964,42 @@ impl Simulation {
         propagation::apply_influences(&mut self.domain, &self.buf_influences);
 
         self.perf.end_phase(Phase::Propagation);
+
+        // === Phase 4a : V6 — Sparsité à front d'onde ===
+        if config.v6_sparsity.enabled {
+            let activations: Vec<f32> = self.domain.nodes.iter().map(|n| n.activation).collect();
+            let thresholds: Vec<f32> = self.domain.nodes.iter().map(|n| n.threshold).collect();
+            let fatigues: Vec<f32> = self.domain.nodes.iter().map(|n| n.fatigue).collect();
+            let inhibitions: Vec<f32> = self.domain.nodes.iter().map(|n| n.inhibition).collect();
+            let excitabilities: Vec<f32> = self.domain.nodes.iter().map(|n| n.excitability).collect();
+            let threshold_mods: Vec<f32> = self.domain.nodes.iter().map(|n| n.threshold_mod).collect();
+
+            let threshold = crate::sparsity::compute_sparsity_threshold(
+                &activations,
+                &self.buf_first_activation_tick,
+                tick as u32,
+                &config.v6_sparsity,
+            );
+
+            let mut cpu_activations: Vec<f32> = activations;
+            crate::sparsity::apply_sparsity_cpu(
+                &mut cpu_activations,
+                &mut self.buf_first_activation_tick,
+                &thresholds,
+                &fatigues,
+                &inhibitions,
+                &excitabilities,
+                &threshold_mods,
+                tick as u32,
+                &config.v6_sparsity,
+                threshold,
+            );
+
+            // Write back activations
+            for (node, &act) in self.domain.nodes.iter_mut().zip(cpu_activations.iter()) {
+                node.activation = act;
+            }
+        }
 
         // === Phase 4b : V5 — Réverbération locale (avant dissipation) ===
         if config.v5_sustained.reverberation && config.v5_sustained.reverb_gain > 0.0 {
